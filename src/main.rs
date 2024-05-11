@@ -25,7 +25,7 @@ enum NorgToken {
 }
 
 fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
-    let special_chars = "*-~/_!%^,\"'$:@|=.";
+    let special_chars = "*-~/_!%^,\"'$:@|=.#+>";
 
     let ws = filter(|c: &char| c.is_inline_whitespace())
         .repeated()
@@ -66,8 +66,8 @@ enum NorgBlock {
         level: u16,
         title: Vec<NorgToken>,
     },
-    List {
-        list_type: char,
+    NestableDetachedModifier {
+        modifier_type: char,
         level: u16,
     },
     RangeableDetachedModifier {
@@ -90,7 +90,12 @@ enum NorgBlock {
     InfirmTag {
         name: Vec<NorgToken>,
         parameters: Option<Vec<Vec<NorgToken>>>,
-    }
+    },
+    CarryoverTag {
+        tag_type: char,
+        name: Vec<NorgToken>,
+        parameters: Option<Vec<Vec<NorgToken>>>,
+    },
 }
 
 fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::error::Simple<NorgToken>>
@@ -116,14 +121,14 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     })
     .labelled("heading");
 
-    let list = select! {
-        Special(c) if c == '-' || c == '~' => c,
+    let nestable_detached_modifier = select! {
+        Special(c) if c == '-' || c == '~' || c == '>' => c,
     }
     .repeated()
     .at_least(1)
     .map(|chars| (chars[0], chars.len() as u16))
     .then_ignore(just(Whitespace).repeated().at_least(1))
-    .map(|(list_type, level)| NorgBlock::List { list_type, level })
+    .map(|(modifier_type, level)| NorgBlock::NestableDetachedModifier { modifier_type, level })
     .labelled("nestabled_detached_modifier");
 
     let rangeable_mod = |c: char| {
@@ -182,12 +187,14 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             .then_ignore(one_of([SingleNewline, Newlines]))
             .then(tag_end.not().repeated())
             .then_ignore(tag_end)
-            .map(move |((name, parameters), content)| NorgBlock::VerbatimRangedTag {
-                tag_type: c,
-                name,
-                parameters,
-                content,
-            })
+            .map(
+                move |((name, parameters), content)| NorgBlock::VerbatimRangedTag {
+                    tag_type: c,
+                    name,
+                    parameters,
+                    content,
+                },
+            )
     };
 
     let ranged_tag = |c: char| {
@@ -242,9 +249,39 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             .map(|(name, parameters)| NorgBlock::InfirmTag { name, parameters })
     };
 
+    let carryover_tags = {
+        let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
+            .repeated()
+            .at_least(1)
+            .separated_by(just(Whitespace).repeated().at_least(1));
+
+        select! {
+            Special('+') => '+',
+            Special('#') => '#',
+        }
+        .then(
+            none_of([Newlines, SingleNewline, Eof, Whitespace])
+                .repeated()
+                .at_least(1),
+        )
+        .then(
+            just(Whitespace)
+                .repeated()
+                .at_least(1)
+                .ignore_then(parameters)
+                .or_not(),
+        )
+        .then_ignore(one_of([SingleNewline, Newlines]))
+        .map(|((tag_type, name), parameters)| NorgBlock::CarryoverTag {
+            tag_type,
+            name,
+            parameters,
+        })
+    };
+
     choice((
         heading,
-        list,
+        nestable_detached_modifier,
         rangeable_mod('$'),
         rangeable_mod_closer('$'),
         rangeable_mod('^'),
@@ -255,6 +292,7 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         ranged_tag('|'),
         ranged_tag('='),
         infirm_tag,
+        carryover_tags,
         paragraph_segment
             .chain(one_of([SingleNewline, Newlines, Eof]))
             .map(NorgBlock::ParagraphSegment)
