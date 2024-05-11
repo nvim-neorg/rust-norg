@@ -39,10 +39,13 @@ fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<c
         .collect()
         .map(NorgToken::Text);
 
-    let newline = one_of("\n\r").to(NorgToken::SingleNewline);
+    let newline = one_of("\n\r")
+        .then_ignore(ws.clone().repeated())
+        .to(NorgToken::SingleNewline);
     let newlines = one_of("\n\r")
         .repeated()
         .at_least(2)
+        .then_ignore(ws.clone().repeated())
         .to(NorgToken::Newlines);
 
     let special = one_of(special_chars).map(NorgToken::Special);
@@ -126,6 +129,7 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     }
     .repeated()
     .at_least(1)
+    // TODO: Validate the tree by ensuring all chars are the same.
     .map(|chars| (chars[0], chars.len() as u16))
     .then_ignore(just(Whitespace).repeated().at_least(1))
     .map(|(modifier_type, level)| NorgBlock::NestableDetachedModifier { modifier_type, level })
@@ -298,10 +302,12 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             .map(NorgBlock::ParagraphSegment)
             .labelled("paragraph_segment"),
     ))
-    .padded_by(one_of([SingleNewline, Newlines]).repeated())
+    .padded_by(one_of([Whitespace, SingleNewline, Newlines]).repeated())
     .repeated()
     .then_ignore(just(Eof))
 }
+
+// enum NorgASTFlat {}
 
 fn main() -> Result<()> {
     let parser = Norg::parse();
