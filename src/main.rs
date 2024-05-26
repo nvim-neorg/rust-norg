@@ -25,15 +25,27 @@ enum NorgToken {
     Eof,
 }
 
-fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
-    let special_chars = "*-~/_!%^,\"'$:@|=.#+>";
+const SPECIAL_CHARS: &str = "*-~/_!%^,\"'$:@|=.#+<>()[]{}";
 
+/// take a char and turn it into a NorgToken. Takes away the guessing game of 'is that char in the
+/// special chars list?'
+fn norg_char(char: char) -> NorgToken {
+    match char {
+        ' ' => NorgToken::Whitespace,
+        '\n' => NorgToken::SingleNewline,
+        _ if SPECIAL_CHARS.contains(char) => NorgToken::Special(char),
+        _ => NorgToken::Text(char.to_string()),
+    }
+}
+
+fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
     let ws = filter(|c: &char| c.is_inline_whitespace())
         .repeated()
         .at_least(1)
         .to(NorgToken::Whitespace);
+
     let word = filter(|c: &char| c.is_whitespace() || *c == '\\')
-        .or(one_of(special_chars))
+        .or(one_of(SPECIAL_CHARS))
         .not()
         .repeated()
         .at_least(1)
@@ -43,17 +55,18 @@ fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<c
     let newline = one_of("\n\r")
         .then_ignore(ws.clone().repeated())
         .to(NorgToken::SingleNewline);
+
     let newlines = one_of("\n\r")
         .repeated()
         .at_least(2)
         .then_ignore(ws.clone().repeated())
         .to(NorgToken::Newlines);
 
-    let special = one_of(special_chars).map(NorgToken::Special);
+    let special = one_of(SPECIAL_CHARS).map(NorgToken::Special);
 
     let escape = just('\\').ignore_then(any()).map(NorgToken::Escape);
 
-    let tag_end = one_of(special_chars)
+    let tag_end = one_of(SPECIAL_CHARS)
         .then_ignore(keyword("end"))
         .then_ignore(one_of("\n\r").rewind())
         .map(NorgToken::End);
@@ -74,6 +87,7 @@ enum NorgBlock {
     NestableDetachedModifier {
         modifier_type: char,
         level: u16,
+        extension_section: Vec<NorgToken>,
     },
     RangeableDetachedModifier {
         ranged: bool,
@@ -126,6 +140,15 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     })
     .labelled("heading");
 
+    let extension_section = just(norg_char('('))
+        // .then(paragraph_segment.clone())
+        .ignore_then(
+            none_of([norg_char(')'), Newlines, SingleNewline, Eof])
+                .repeated()
+                .at_least(1),
+        )
+        .then_ignore(just(norg_char(')')));
+
     let nestable_detached_modifier = select! {
         Special(c) if c == '-' || c == '~' || c == '>' => c,
     }
@@ -134,10 +157,12 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     // TODO: Validate the tree by ensuring all chars are the same.
     .map(|chars| (chars[0], chars.len() as u16))
     .then_ignore(just(Whitespace).repeated().at_least(1))
+    .then(extension_section)
     .map(
-        |(modifier_type, level)| NorgBlock::NestableDetachedModifier {
+        |((modifier_type, level), extension_section)| NorgBlock::NestableDetachedModifier {
             modifier_type,
             level,
+            extension_section,
         },
     )
     .labelled("nestabled_detached_modifier");
@@ -341,6 +366,64 @@ enum RangeableDetachedModifier {
     Table,
 }
 
+// I think the way this parser will work, we'll have a detatched modifier get parsed, and then
+// if we find ( ), we'll parse for extensions and try to store the extensions in a vec on the
+// modifier I think... That would be a good way to represent it right?
+
+#[derive(Debug, Clone, PartialEq)]
+enum TodoStatus {
+    /// ` `
+    Undone,
+    /// `x`
+    Done,
+    /// `?`
+    NeedsClarification,
+    /// `=`
+    Paused,
+    /// `!`
+    Urgent,
+    /// `+` or `+ 4th may`
+    Recurring(Option<String>),
+    /// `-`
+    Pending,
+    /// `_`
+    Canceled,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum DetachedModifierExtension {
+    // DONE: I'm not sure that the individual characters matter... I have to refer to the spec here
+    // Okay, yeah, we're going to parse the insides of the extension as well. These are going to be
+    // pretty fun I think. The parts after the special char are just text though
+    /// todo item status:
+    /// `- ( ) undone`
+    /// `- (x) done`
+    /// `- (?) needs clarification`
+    /// `- (=) paused/on hold`
+    /// `- (!) urgent`
+    /// `- (+) recurring`
+    /// `- (+ 15th May) recurring with a time stamp`
+    /// `- (-) in progress/pending`
+    /// `- (_) put down/canceled`
+    Todo(TodoStatus),
+
+    /// Priority, `#` and then any text
+    /// `- (# A) Priority A`
+    Priority(String),
+
+    /// Time stamp extension:
+    /// `- (@ <some time>) list item text`
+    Timestamp(String),
+
+    /// Time stamp for the due date/deadline for this item
+    /// `- (< 1 Jan 2025) Do something`
+    DueDate(String),
+
+    /// Time stamp for the start time of the item:
+    /// `- (> 2 Jan 2025)` Start something
+    StartDate(String),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum CarryoverTag {
     Attribute, // `+`
@@ -359,8 +442,10 @@ enum NorgASTFlat {
     NestableDetachedModifier {
         modifier_type: NestableDetachedModifier,
         level: u16,
+        extensions: Vec<DetachedModifierExtension>,
         content: Box<Self>,
     },
+    // TODO: can these have detached modifiers too?
     RangeableDetachedModifier {
         modifier_type: RangeableDetachedModifier,
         title: Vec<NorgToken>,
@@ -369,6 +454,7 @@ enum NorgASTFlat {
     Heading {
         level: u16,
         title: Vec<NorgToken>,
+        extensions: Vec<DetachedModifierExtension>,
         content: Vec<Self>,
     },
     CarryoverTag {
@@ -393,6 +479,62 @@ enum NorgASTFlat {
     },
 }
 
+fn detached_modifier_extensions(
+) -> impl Parser<NorgToken, Vec<DetachedModifierExtension>, Error = chumsky::error::Simple<NorgToken>>
+{
+    use NorgToken::*;
+
+    let detached_modifier_extension_tokens: Vec<NorgToken> =
+        "@#<>+= x_-!?".chars().map(norg_char).collect();
+
+    // a single extension without the surrounding `()` or delimiting `|`
+    // This parsing is not going to happen at the block level, it will happen later I guess.
+    let detached_modifier_extension = one_of(detached_modifier_extension_tokens)
+        .then(
+            just(Whitespace)
+                .ignore_then(none_of([Special('|'), Eof, SingleNewline, Newlines]).repeated())
+                .or_not()
+                .map(|tokens| {
+                    if let Some(tokens) = tokens {
+                        tokens
+                            .iter()
+                            .filter_map(|spec| match spec {
+                                Special(char) => Some(char.to_string()),
+                                Text(txt) => Some(txt.to_string()),
+                                Escape(char) => Some(char.to_string()),
+                                Whitespace => Some(" ".to_string()),
+                                _ => None,
+                            })
+                            .join("")
+                    } else {
+                        String::from("")
+                    }
+                }),
+        )
+        .map(|(spec, metadata)| match spec {
+            Special('@') => DetachedModifierExtension::Timestamp(metadata),
+            Special('#') => DetachedModifierExtension::Priority(metadata),
+            Special('<') => DetachedModifierExtension::DueDate(metadata),
+            Special('>') => DetachedModifierExtension::StartDate(metadata),
+            Special('+') => {
+                DetachedModifierExtension::Todo(TodoStatus::Recurring(if metadata == "" {
+                    None
+                } else {
+                    Some(metadata)
+                }))
+            }
+            Special('=') => DetachedModifierExtension::Todo(TodoStatus::Paused),
+            Whitespace => DetachedModifierExtension::Todo(TodoStatus::Undone),
+            Text(x) if x == "x" => DetachedModifierExtension::Todo(TodoStatus::Done),
+            Special('_') => DetachedModifierExtension::Todo(TodoStatus::Canceled),
+            Special('-') => DetachedModifierExtension::Todo(TodoStatus::Pending),
+            Special('!') => DetachedModifierExtension::Todo(TodoStatus::Urgent),
+            Text(x) if x == "?" => DetachedModifierExtension::Todo(TodoStatus::NeedsClarification),
+            _ => panic!("How did we get here"),
+        });
+
+    detached_modifier_extension.separated_by(just(Special('|'))).at_least(1)
+}
 fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error::Simple<NorgBlock>>
 {
     recursive(|stage_3| {
@@ -412,39 +554,57 @@ fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error:
                 .chain(paragraph_segment_end.or_not()),
             paragraph_segment_end,
         ))
-        .map(NorgASTFlat::Paragraph);
+            .map(NorgASTFlat::Paragraph);
 
         let nestable_detached_modifier = select! {
-            NorgBlock::NestableDetachedModifier { modifier_type: '-', level } => (NestableDetachedModifier::UnorderedList, level),
-            NorgBlock::NestableDetachedModifier { modifier_type: '~', level } => (NestableDetachedModifier::OrderedList, level),
-            NorgBlock::NestableDetachedModifier { modifier_type: '>', level } => (NestableDetachedModifier::Quote, level),
-        }.then(paragraph).map(|((modifier_type, level), paragraph)| NorgASTFlat::NestableDetachedModifier { modifier_type, level, content: Box::new(paragraph), });
+            NorgBlock::NestableDetachedModifier { modifier_type: '-', level, extension_section } => (NestableDetachedModifier::UnorderedList, level, extension_section),
+            NorgBlock::NestableDetachedModifier { modifier_type: '~', level, extension_section } => (NestableDetachedModifier::OrderedList, level, extension_section),
+            NorgBlock::NestableDetachedModifier { modifier_type: '>', level, extension_section } => (NestableDetachedModifier::Quote, level, extension_section),
+        }.then(paragraph).map(|((modifier_type, level, extension_section), paragraph)| NorgASTFlat::NestableDetachedModifier {
+                modifier_type,
+                level,
+                extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+                content: Box::new(paragraph),
+            });
 
         let nonranged_detached_modifier = select! {
             NorgBlock::RangeableDetachedModifier { modifier_type: '$', ranged: false, title } => (RangeableDetachedModifier::Definition, title),
             NorgBlock::RangeableDetachedModifier { modifier_type: '^', ranged: false, title } => (RangeableDetachedModifier::Footnote, title),
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: false, title } => (RangeableDetachedModifier::Table, title),
-        }.then(paragraph).map(|((modifier_type, title), paragraph)| NorgASTFlat::RangeableDetachedModifier { modifier_type, title, content: Vec::from([paragraph]), });
+        }.then(paragraph).map(|((modifier_type, title), paragraph)| NorgASTFlat::RangeableDetachedModifier {
+                modifier_type,
+                title,
+                content: Vec::from([paragraph]),
+            });
 
         let ranged_detached_modifier = select! {
             NorgBlock::RangeableDetachedModifier { modifier_type: '$', ranged: true, title } => ('$', RangeableDetachedModifier::Definition, title),
             NorgBlock::RangeableDetachedModifier { modifier_type: '^', ranged: true, title } => ('^', RangeableDetachedModifier::Footnote, title),
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: true, title } => (':', RangeableDetachedModifier::Table, title),
-        }.then(stage_3.clone().repeated()).then(select! { NorgBlock::RangeableDetachedModifierClose(c) => c }).try_map(|(((opening_ch, modifier_type, title), content), closing_ch), span| if opening_ch == closing_ch {
-            Ok(NorgASTFlat::RangeableDetachedModifier { modifier_type, title, content })
-        } else {
-            Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
-        });
+        }
+            .then(stage_3.clone().repeated())
+            .then(select! { NorgBlock::RangeableDetachedModifierClose(c) => c })
+            .try_map(|(((opening_ch, modifier_type, title), content), closing_ch), span|
+                if opening_ch == closing_ch {
+                    Ok(NorgASTFlat::RangeableDetachedModifier {
+                        modifier_type,
+                        title,
+                        content,
+                    })
+                } else {
+                    Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
+                });
 
         let heading = select! {
             NorgBlock::Heading { level, title } => (level, title),
         }
-        .then(stage_3.clone().repeated())
-        .map(|((level, title), content)| NorgASTFlat::Heading {
-            level,
-            title,
-            content,
-        });
+            .then(stage_3.clone().repeated())
+            .map(|((level, title), content)| NorgASTFlat::Heading {
+                level,
+                title,
+                extensions: vec![],
+                content,
+            });
 
         let stringify_tokens = |tokens: Vec<NorgToken>| -> String {
             tokens.into_iter().map(|token| match token {
@@ -462,8 +622,13 @@ fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error:
             NorgBlock::CarryoverTag { tag_type: '+', name, parameters } => (CarryoverTag::Attribute, name, parameters),
             NorgBlock::CarryoverTag { tag_type: '#', name, parameters } => (CarryoverTag::Macro, name, parameters),
         }.then(stage_3.clone()).map(move |((tag_type, name, parameters), next_object)| {
-            NorgASTFlat::CarryoverTag { tag_type, name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect(), next_object: Box::new(next_object) }
-        });
+                NorgASTFlat::CarryoverTag {
+                    tag_type,
+                    name: stringify_tokens_and_split(name),
+                    parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect(),
+                    next_object: Box::new(next_object),
+                }
+            });
 
         let verbatim_ranged_tag = select! {
             NorgBlock::VerbatimRangedTag { name, parameters, content } => {
@@ -482,10 +647,10 @@ fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error:
             NorgBlock::RangedTagEnd('=') => RangedTag::Macro,
             NorgBlock::RangedTagEnd('|') => RangedTag::Standard,
         }).try_map(|(((tag_type, name, parameters), content), closing_tag_type), span| if tag_type == closing_tag_type {
-            Ok(NorgASTFlat::RangedTag { name, parameters, content })
-        } else {
-            Err(Simple::custom(span, "Invalid closing modifier for ranged tag.")) // TODO: Improve errors
-        });
+                Ok(NorgASTFlat::RangedTag { name, parameters, content })
+            } else {
+                    Err(Simple::custom(span, "Invalid closing modifier for ranged tag.")) // TODO: Improve errors
+                });
 
         let infirm_tag = select! {
             NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect() },
@@ -509,6 +674,17 @@ fn main() -> Result<()> {
     let parser = Norg::parse();
 
     let content = String::from_utf8(std::fs::read(parser.file)?)?;
+    println!(
+        "{:?}",
+        lexer().parse_recovery(content.clone()).0.expect("Failed")
+    );
+
+    println!(
+        "{:#?}",
+        detached_modifier_extensions().parse([NorgToken::Whitespace])
+    );
+
+    println!("-----------------------");
 
     println!(
         "{:#?}",
@@ -522,11 +698,13 @@ fn main() -> Result<()> {
 
     println!(
         "{:#?}",
-        stage_3().parse(
-            block_level()
-                .parse(lexer().parse_recovery(content).0.expect("Failed"))
-                .unwrap()
-        ).unwrap()
+        stage_3()
+            .parse(
+                block_level()
+                    .parse(lexer().parse_recovery(content).0.expect("Failed"))
+                    .unwrap()
+            )
+            .unwrap()
     );
 
     Ok(())
