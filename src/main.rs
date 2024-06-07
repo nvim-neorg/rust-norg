@@ -27,17 +27,6 @@ enum NorgToken {
 
 const SPECIAL_CHARS: &str = "*-~/_!%^,\"'$:@|=.#+<>()[]{}";
 
-/// take a char and turn it into a NorgToken. Takes away the guessing game of 'is that char in the
-/// special chars list?'
-fn norg_char(char: char) -> NorgToken {
-    match char {
-        ' ' => NorgToken::Whitespace,
-        '\n' => NorgToken::SingleNewline,
-        _ if SPECIAL_CHARS.contains(char) => NorgToken::Special(char),
-        _ => NorgToken::Text(char.to_string()),
-    }
-}
-
 fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
     let ws = filter(|c: &char| c.is_inline_whitespace())
         .repeated()
@@ -127,14 +116,14 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         .repeated()
         .at_least(1);
 
-    let extension_section = just(norg_char('('))
+    let extension_section = just(Special('('))
         // .then(paragraph_segment.clone())
         .ignore_then(
-            none_of([norg_char(')'), Newlines, SingleNewline, Eof])
+            none_of([Special(')'), Newlines, SingleNewline, Eof])
                 .repeated()
                 .at_least(1),
         )
-        .then_ignore(just(norg_char(')')));
+        .then_ignore(just(Special(')')));
 
     let heading = select! {
         Special('*') => '*',
@@ -487,12 +476,15 @@ fn detached_modifier_extensions(
 {
     use NorgToken::*;
 
-    let detached_modifier_extension_tokens: Vec<NorgToken> =
-        "@#<>+= x_-!?".chars().map(norg_char).collect();
+    let detached_modifier_extension_tokens = select! {
+        c @ Special('@' | '#' | '<' | '>' | '+' | '=' | '_' | '-' | '!' | '?') => c,
+        Whitespace => Whitespace,
+        Text(str) if str.starts_with('x') => Text(str),
+    };
 
     // a single extension without the surrounding `()` or delimiting `|`
     // This parsing is not going to happen at the block level, it will happen later I guess.
-    let detached_modifier_extension = one_of(detached_modifier_extension_tokens)
+    let detached_modifier_extension = detached_modifier_extension_tokens
         .then(
             just(Whitespace)
                 .ignore_then(none_of([Special('|'), Eof, SingleNewline, Newlines]).repeated())
@@ -520,7 +512,7 @@ fn detached_modifier_extensions(
             Special('<') => DetachedModifierExtension::DueDate(metadata),
             Special('>') => DetachedModifierExtension::StartDate(metadata),
             Special('+') => {
-                DetachedModifierExtension::Todo(TodoStatus::Recurring(if metadata == "" {
+                DetachedModifierExtension::Todo(TodoStatus::Recurring(if metadata.is_empty() {
                     None
                 } else {
                     Some(metadata)
