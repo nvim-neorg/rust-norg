@@ -116,31 +116,27 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         .repeated()
         .at_least(1);
 
-    let extension_section = just(Special('('))
-        // .then(paragraph_segment.clone())
-        .ignore_then(
-            none_of([Special(')'), Newlines, SingleNewline, Eof])
-                .repeated()
-                .at_least(1),
-        )
-        .then_ignore(just(Special(')')));
+    let extension_section = none_of([Special(')'), Newlines, SingleNewline, Eof])
+        .repeated()
+        .at_least(1)
+        .delimited_by(just(Special('(')), just(Special(')')));
 
     let heading = select! {
         Special('*') => '*',
     }
-        .repeated()
-        .at_least(1)
-        .map(|chars| chars.len() as u16)
-        .then_ignore(just(Whitespace).repeated().at_least(1))
-        .then(extension_section.clone().or_not())
-        .then(paragraph_segment.clone())
-        .then_ignore(one_of([SingleNewline, Newlines, Eof]))
-        .map(|((level, extension_section), title)| NorgBlock::Heading {
-            level,
-            title,
-            extension_section: extension_section.unwrap_or_default(),
-        })
-        .labelled("heading");
+    .repeated()
+    .at_least(1)
+    .map(|chars| chars.len() as u16)
+    .then_ignore(just(Whitespace).repeated().at_least(1))
+    .then(extension_section.clone().or_not())
+    .then(paragraph_segment.clone())
+    .then_ignore(one_of([SingleNewline, Newlines, Eof]))
+    .map(|((level, extension_section), title)| NorgBlock::Heading {
+        level,
+        title,
+        extension_section: extension_section.unwrap_or_default(),
+    })
+    .labelled("heading");
 
     let nestable_detached_modifier = select! {
         Special(c) if c == '-' || c == '~' || c == '>' => c,
@@ -170,14 +166,14 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             .then(extension_section.clone().or_not())
             .then(paragraph_segment.clone())
             .then_ignore(one_of([SingleNewline, Newlines, Eof]))
-            .map(
-                |(((modifier_type, ranged), extension_section), title)| NorgBlock::RangeableDetachedModifier {
+            .map(|(((modifier_type, ranged), extension_section), title)| {
+                NorgBlock::RangeableDetachedModifier {
                     modifier_type,
                     ranged,
                     title,
                     extension_section: extension_section.unwrap_or_default(),
-                },
-            )
+                }
+            })
             .labelled("rangeable_detached_modifier")
     };
 
@@ -477,13 +473,11 @@ fn detached_modifier_extensions(
     use NorgToken::*;
 
     let detached_modifier_extension_tokens = select! {
-        c @ Special('@' | '#' | '<' | '>' | '+' | '=' | '_' | '-' | '!' | '?') => c,
+        c @ Special('@' | '#' | '<' | '>' | '+' | '=' | '_' | '-' | '!') => c,
         Whitespace => Whitespace,
-        Text(str) if str.starts_with('x') => Text(str),
+        Text(str) if str == "x" || str == "?" => Text(str),
     };
 
-    // a single extension without the surrounding `()` or delimiting `|`
-    // This parsing is not going to happen at the block level, it will happen later I guess.
     let detached_modifier_extension = detached_modifier_extension_tokens
         .then(
             just(Whitespace)
@@ -519,17 +513,20 @@ fn detached_modifier_extensions(
                 }))
             }
             Special('=') => DetachedModifierExtension::Todo(TodoStatus::Paused),
-            Whitespace => DetachedModifierExtension::Todo(TodoStatus::Undone),
-            Text(x) if x == "x" => DetachedModifierExtension::Todo(TodoStatus::Done),
             Special('_') => DetachedModifierExtension::Todo(TodoStatus::Canceled),
             Special('-') => DetachedModifierExtension::Todo(TodoStatus::Pending),
             Special('!') => DetachedModifierExtension::Todo(TodoStatus::Urgent),
+            Whitespace => DetachedModifierExtension::Todo(TodoStatus::Undone),
+            Text(x) if x == "x" => DetachedModifierExtension::Todo(TodoStatus::Done),
             Text(x) if x == "?" => DetachedModifierExtension::Todo(TodoStatus::NeedsClarification),
-            _ => panic!("How did we get here"),
+            _ => unreachable!(),
         });
 
-    detached_modifier_extension.separated_by(just(Special('|'))).at_least(1)
+    detached_modifier_extension
+        .separated_by(just(Special('|')))
+        .at_least(1)
 }
+
 fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error::Simple<NorgBlock>>
 {
     recursive(|stage_3| {
@@ -682,7 +679,12 @@ fn main() -> Result<()> {
     println!(
         "{:#?}",
         block_level()
-            .parse_recovery(lexer().parse_recovery(content.clone()).0.expect("Failed lexer"))
+            .parse_recovery(
+                lexer()
+                    .parse_recovery(content.clone())
+                    .0
+                    .expect("Failed lexer")
+            )
             .0
             .expect("Failed stage 2")
     );
