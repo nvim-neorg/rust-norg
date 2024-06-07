@@ -589,16 +589,19 @@ fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error:
                     Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
                 });
 
-        let heading = select! {
-            NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
-        }
-            .then(stage_3.clone().repeated())
-            .map(|((level, title, extension_section), content)| NorgASTFlat::Heading {
+            let stage_3_clone = stage_3.clone();
+
+            // TODO(vhyrro): Proper error handling here, properly make headings non-self-consuming
+            let heading = recursive(|heading| select! {
+                NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
+            }
+            .then(heading.not().repeated())
+            .try_map(move |((level, title, extension_section), content), _span| Ok(NorgASTFlat::Heading {
                 level,
                 title,
                 extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
-                content,
-            });
+                content: stage_3_clone.clone().repeated().parse(content).unwrap_or_default(),
+            })));
 
         let stringify_tokens = |tokens: Vec<NorgToken>| -> String {
             tokens.into_iter().map(|token| match token {
@@ -703,4 +706,10 @@ fn main() -> Result<()> {
     );
 
     Ok(())
+}
+
+// TODO(vhyrro): Create a large amount of test cases
+#[cfg(test)]
+mod tests {
+
 }
