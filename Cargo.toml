@@ -8,6 +8,7 @@ chumsky = "0.9.3"
 clap = { version = "4.5.4", features = ["derive"] }
 eyre = "0.6.12"
 itertools = "0.13.0"
+serde = { version = "1.0.203", features = ["derive"] }
 
 [dev-dependencies]
-insta = "1.39.0"
+insta = { version = "1.39.0", features = ["yaml"] }

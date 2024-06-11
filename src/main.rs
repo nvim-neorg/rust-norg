@@ -4,6 +4,7 @@ use chumsky::Parser;
 use clap::Parser as ClapParser;
 use eyre::Result;
 use itertools::Itertools;
+use serde::Serialize;
 use std::path::PathBuf;
 
 #[derive(ClapParser)]
@@ -13,7 +14,7 @@ struct Norg {
     file: PathBuf,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 enum NorgToken {
     Whitespace,
     SingleNewline,
@@ -65,7 +66,7 @@ fn lexer() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<c
         .chain(end().to(NorgToken::Eof))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 enum NorgBlock {
     ParagraphSegment(Vec<NorgToken>),
     ParagraphSegmentEnd(Vec<NorgToken>),
@@ -343,14 +344,14 @@ fn block_level() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     .then_ignore(just(Eof))
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum NestableDetachedModifier {
     Quote,
     UnorderedList,
     OrderedList,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum RangeableDetachedModifier {
     Definition,
     Footnote,
@@ -361,7 +362,7 @@ enum RangeableDetachedModifier {
 // if we find ( ), we'll parse for extensions and try to store the extensions in a vec on the
 // modifier I think... That would be a good way to represent it right?
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum TodoStatus {
     /// ` `
     Undone,
@@ -381,7 +382,7 @@ enum TodoStatus {
     Canceled,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum DetachedModifierExtension {
     /// todo item status:
     /// `- ( ) undone`
@@ -412,19 +413,19 @@ enum DetachedModifierExtension {
     StartDate(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum CarryoverTag {
     Attribute, // `+`
     Macro,     // `#`
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum RangedTag {
     Macro,
     Standard,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 enum NorgASTFlat {
     Paragraph(Vec<NorgToken>),
     NestableDetachedModifier {
@@ -589,19 +590,19 @@ fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error:
                     Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
                 });
 
-            let stage_3_clone = stage_3.clone();
+        let stage_3_clone = stage_3.clone();
 
-            // TODO(vhyrro): Proper error handling here, properly make headings non-self-consuming
-            let heading = recursive(|heading| select! {
-                NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
-            }
-            .then(heading.not().repeated())
-            .try_map(move |((level, title, extension_section), content), _span| Ok(NorgASTFlat::Heading {
-                level,
-                title,
-                extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
-                content: stage_3_clone.clone().repeated().parse(content).unwrap_or_default(),
-            })));
+        // TODO(vhyrro): Proper error handling here, properly make headings non-self-consuming
+        let heading = recursive(|heading| select! {
+            NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
+        }
+        .then(heading.not().repeated())
+        .try_map(move |((level, title, extension_section), content), _span| Ok(NorgASTFlat::Heading {
+            level,
+            title,
+            extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+            content: stage_3_clone.clone().repeated().parse(content).unwrap_or_default(),
+        })));
 
         let stringify_tokens = |tokens: Vec<NorgToken>| -> String {
             tokens.into_iter().map(|token| match token {
@@ -711,5 +712,81 @@ fn main() -> Result<()> {
 // TODO(vhyrro): Create a large amount of test cases
 #[cfg(test)]
 mod tests {
+    use chumsky::Parser;
+    use insta::assert_yaml_snapshot;
+    use itertools::Itertools;
 
+    use crate::{stage_3, NorgASTFlat};
+
+    fn parse(content: String) -> Vec<NorgASTFlat> {
+        stage_3()
+            .parse(
+                crate::block_level()
+                    .parse(crate::lexer().parse(content).expect("lexing failed"))
+                    .expect("block level failed"),
+            )
+            .expect("stage 3 failed")
+    }
+
+    #[test]
+    fn headings() {
+        let examples = [
+            "* Heading",
+            "********* Heading",
+            "
+            * Heading
+              content.
+            ",
+            "
+            ******* Heading
+            ",
+            "
+            * Heading
+            * Another heading
+            ",
+            "
+            * Heading
+            ** Subheading
+            * Back to regular heading
+            ",
+            "
+            * Heading
+              sneaky content.
+            ** Subheading
+               more sneaky content inside.
+            * Back to regular heading
+            ",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn lists() {
+        let examples = [
+            "- Test list",
+            "---- Test list",
+            "
+                - Test list
+                - Test list
+                -- Test list
+                -- Test list
+                - Test list
+                --- Test list
+            ",
+            "---not list",
+            "- - a list item",
+            "--> not a list",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
 }

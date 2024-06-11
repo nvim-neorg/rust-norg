@@ -1,0 +1,107 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+      content: []
+- - Heading:
+      level: 9
+      title:
+        - Text: Heading
+      extensions: []
+      content: []
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: content
+            - Special: "."
+- - Heading:
+      level: 7
+      title:
+        - Text: Heading
+      extensions: []
+      content: []
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+      content: []
+  - Heading:
+      level: 1
+      title:
+        - Text: Another
+        - Whitespace
+        - Text: heading
+      extensions: []
+      content: []
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+      content: []
+  - Heading:
+      level: 2
+      title:
+        - Text: Subheading
+      extensions: []
+      content: []
+  - Heading:
+      level: 1
+      title:
+        - Text: Back
+        - Whitespace
+        - Text: to
+        - Whitespace
+        - Text: regular
+        - Whitespace
+        - Text: heading
+      extensions: []
+      content: []
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: sneaky
+            - Whitespace
+            - Text: content
+            - Special: "."
+  - Heading:
+      level: 2
+      title:
+        - Text: Subheading
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: more
+            - Whitespace
+            - Text: sneaky
+            - Whitespace
+            - Text: content
+            - Whitespace
+            - Text: inside
+            - Special: "."
+  - Heading:
+      level: 1
+      title:
+        - Text: Back
+        - Whitespace
+        - Text: to
+        - Whitespace
+        - Text: regular
+        - Whitespace
+        - Text: heading
+      extensions: []
+      content: []
