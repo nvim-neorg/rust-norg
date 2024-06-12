@@ -891,4 +891,123 @@ mod tests {
 
         assert_yaml_snapshot!(examples);
     }
+
+    // TODO(vhyrro): Maybe proptests here?
+    #[test]
+    fn infirm_tags() {
+        let examples = [
+            ".tag",
+            ".tag-name_with-complexchars",
+            ".tag-name_ parameter",
+            ".tag-name_ one\\ large\\ parameter",
+            ".tag-name_ one\\ large\\ parameter &^@! third parameter",
+            ".tag.name.image https://github.com/super-special/repo.git?text=hello&other_text=bye",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn carryover_tags() {
+        let examples = [
+            "+tag
+             paragraph",
+            "+tag-name_with-complexchars
+             paragraph",
+            "+tag-name_ parameter
+             paragraph",
+            "+tag-name_ one\\ large\\ parameter
+             paragraph",
+            "+tag-name_ one\\ large\\ parameter &^@! third parameter
+             paragraph",
+            "+tag.name.image https://github.com/super-special/repo.git?text=hello&other_text=bye
+             paragraph",
+            "#tag
+             paragraph",
+            "#tag-name_with-complexchars
+             paragraph",
+            "#tag-name_ parameter
+             paragraph",
+            "#tag-name_ one\\ large\\ parameter
+             paragraph",
+            "#tag-name_ one\\ large\\ parameter &^@! third parameter
+             paragraph",
+            "#tag.name.image https://github.com/super-special/repo.git?text=hello&other_text=bye
+             paragraph",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn ranged_verbatim_tags() {
+        let examples = [
+            r#"@code
+               print("Hello world!")
+               @end"#,
+            r#"@code.some-text.here lua\ language second-parameter
+               print("Hello world!")
+               @end"#,
+            r#"@some-complex_tag_ first-parameter #&*(&$!) third-parameter
+
+               function hello()
+                   print("Hello World")
+               end
+
+               hello()
+               @end"#,
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn verbatim_tags() {
+        let examples = [
+            r#"|example
+               Hello world!
+               |end"#,
+            r#"|example.some-text.here one\ parameter second-parameter
+                #carryover
+                text within
+               |end"#,
+            r#"|some-complex_tag_ first-parameter #&*(&$!) third-parameter
+                this is some text within
+               |end"#,
+            r#"|example
+               * Hello world!
+               |end"#,
+            r#"=example
+               Hello world!
+               =end"#,
+            r#"=example.some-text.here one\ parameter second-parameter
+                #carryover
+                text within
+               =end"#,
+            r#"=some-complex_tag_ first-parameter #&*(&$!) third-parameter
+                this is some text within
+               =end"#,
+            r#"=example
+               * Hello world!
+               =end"#,
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
 }

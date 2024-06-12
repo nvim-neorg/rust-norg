@@ -1,0 +1,37 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - InfirmTag:
+      name:
+        - tag
+      parameters: []
+- - InfirmTag:
+      name:
+        - tag-name_with-complexchars
+      parameters: []
+- - InfirmTag:
+      name:
+        - tag-name_
+      parameters:
+        - parameter
+- - InfirmTag:
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+- - InfirmTag:
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+        - "&^@!"
+        - third
+        - parameter
+- - InfirmTag:
+      name:
+        - tag
+        - name
+        - image
+      parameters:
+        - "https://github.com/super-special/repo.git?text=hello&other_text=bye"
