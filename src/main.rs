@@ -789,4 +789,106 @@ mod tests {
 
         assert_yaml_snapshot!(examples);
     }
+
+    #[test]
+    fn ordered_lists() {
+        let examples = [
+            "~ Test list",
+            "~~~~ Test list",
+            "
+                ~ Test list
+                ~ Test list
+                ~~ Test list
+                ~~ Test list
+                ~ Test list
+                ~~~ Test list
+            ",
+            "~~~not list",
+            "~ ~ a list item",
+            "~~> not a list",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn quotes() {
+        let examples = [
+            "> Test quote",
+            ">>>> Test quote",
+            "
+                > Test quote
+                > Test quote
+                >> Test quote
+                >> Test quote
+                > Test quote
+                >>> Test quote
+            ",
+            ">>>not quote",
+            "> > a quote item",
+            ">>> not a quote",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    // TODO(vhyrro): Add regression tests too
+    #[test]
+    fn definitions() {
+        let examples = [
+            "$ Term
+               Definition",
+            "$$ Term
+                Long definition
+             $$",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn footnotes() {
+        let examples = [
+            "^ Title
+               Content",
+            "^^ Title
+                Long content
+             ^^",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn tables() {
+        let examples = [
+            ": A1
+               Cell content",
+            ":: A1
+                Long cell content.
+             ::",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(parse)
+        .collect_vec();
+
+        assert_yaml_snapshot!(examples);
+    }
 }

@@ -1,0 +1,22 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - RangeableDetachedModifier:
+      modifier_type: Definition
+      title:
+        - Text: Term
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Definition
+- - RangeableDetachedModifier:
+      modifier_type: Definition
+      title:
+        - Text: Term
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Long
+            - Whitespace
+            - Text: definition

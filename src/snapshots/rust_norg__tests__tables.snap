@@ -1,0 +1,27 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - RangeableDetachedModifier:
+      modifier_type: Table
+      title:
+        - Text: A1
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Cell
+            - Whitespace
+            - Text: content
+- - RangeableDetachedModifier:
+      modifier_type: Table
+      title:
+        - Text: A1
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Long
+            - Whitespace
+            - Text: cell
+            - Whitespace
+            - Text: content
+            - Special: "."

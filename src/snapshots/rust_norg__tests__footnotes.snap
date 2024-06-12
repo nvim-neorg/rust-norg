@@ -1,0 +1,22 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - RangeableDetachedModifier:
+      modifier_type: Footnote
+      title:
+        - Text: Title
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Content
+- - RangeableDetachedModifier:
+      modifier_type: Footnote
+      title:
+        - Text: Title
+      extensions: []
+      content:
+        - Paragraph:
+            - Text: Long
+            - Whitespace
+            - Text: content
