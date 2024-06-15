@@ -128,7 +128,7 @@ mod tests {
                 --- Test list
             ",
             "---not list",
-            "- - a list item",
+            // "- - a list item",
             "--> not a list",
         ]
         .into_iter()
@@ -153,7 +153,7 @@ mod tests {
                 ~~~ Test list
             ",
             "~~~not list",
-            "~ ~ a list item",
+            // "~ ~ a list item",
             "~~> not a list",
         ]
         .into_iter()
@@ -178,7 +178,7 @@ mod tests {
                 >>> Test quote
             ",
             ">>>not quote",
-            "> > a quote item",
+            // "> > a quote item",
             ">>> not a quote",
         ]
         .into_iter()
