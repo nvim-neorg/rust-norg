@@ -183,8 +183,8 @@ fn detached_modifier_extensions(
         .at_least(1)
 }
 
-pub fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error::Simple<NorgBlock>>
-{
+pub fn stage_3(
+) -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error::Simple<NorgBlock>> {
     recursive(|stage_3| {
         let paragraph_segment = select! {
             NorgBlock::ParagraphSegment(content) => content,

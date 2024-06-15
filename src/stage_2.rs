@@ -1,6 +1,7 @@
 //! Converts a set of Norg tokens into a set of blocks.
 
 use chumsky::Parser;
+use itertools::Itertools;
 use serde::Serialize;
 
 use crate::stage_1::NorgToken;
@@ -89,8 +90,26 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     }
     .repeated()
     .at_least(1)
-    // TODO: Validate the tree by ensuring all chars are the same.
-    .map(|chars| (chars[0], chars.len() as u16))
+    .try_map(|chars, span| {
+        if chars.iter().all_equal() {
+            Ok((chars[0], chars.len() as u16))
+        } else {
+            // Get the type of element that the user tried to create.
+            let modifier_type = match chars[0] {
+                '-' => "unordered list",
+                '~' => "ordered list",
+                '>' => "quote",
+                _ => unreachable!(),
+            };
+            Err(Simple::custom(
+                span,
+                format!("
+                    Expected a sequence of '{}' characters when creating {}.
+                    Norg does not permit mixing of modifiers, e.g. `-~>`. Keep all your modifiers the same, e.g. `---`.
+                ", chars[0], modifier_type),
+            ))
+        }
+    })
     .then_ignore(just(Whitespace).repeated().at_least(1))
     .then(extension_section.clone().or_not())
     .map(

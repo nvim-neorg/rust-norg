@@ -1,0 +1,93 @@
+---
+source: src/main.rs
+expression: examples
+---
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 4
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 3
+      extensions: []
+      content:
+        Paragraph:
+          - Text: Test
+          - Whitespace
+          - Text: quote
+- - Paragraph:
+      - Special: ">"
+      - Special: ">"
+      - Special: ">"
+      - Text: not
+      - Whitespace
+      - Text: quote
+- - Paragraph:
+      - Special: ">"
+      - Special: ">"
+      - Special: "-"
+      - Whitespace
+      - Text: not
+      - Whitespace
+      - Text: a
+      - Whitespace
+      - Text: quote

@@ -1,8 +1,11 @@
 //! This file contains the initial lexing stage, which breaks up characters into distinct tokens.
 
-use chumsky::{text::{keyword, Character}, Parser};
-use serde::Serialize;
 use chumsky::prelude::*;
+use chumsky::{
+    text::{keyword, Character},
+    Parser,
+};
+use serde::Serialize;
 
 /// Describes an individual part of the document.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]

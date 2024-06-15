@@ -1,7 +1,7 @@
-use chumsky::Parser as _;
-use crate::stage_3::stage_3;
 use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
+use crate::stage_3::stage_3;
+use chumsky::Parser as _;
 use clap::Parser;
 use eyre::Result;
 use std::path::PathBuf;
@@ -179,7 +179,7 @@ mod tests {
             ",
             ">>>not quote",
             // "> > a quote item",
-            ">>> not a quote",
+            ">>- not a quote",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
