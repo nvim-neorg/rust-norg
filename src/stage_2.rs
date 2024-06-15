@@ -62,6 +62,11 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         .at_least(1)
         .delimited_by(just(Special('(')), just(Special(')')));
 
+    let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
+        .repeated()
+        .at_least(1)
+        .separated_by(just(Whitespace).repeated().at_least(1));
+
     let heading = select! {
         Special('*') => '*',
     }
@@ -129,11 +134,6 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     };
 
     let verbatim_ranged_tag = |c: char| {
-        let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
-            .repeated()
-            .at_least(1)
-            .separated_by(just(Whitespace).repeated().at_least(1));
-
         let parse_char = select! { Special(x) if x == c => x };
         let tag_end = select! {
                 End(x) if x == c => x,
@@ -149,7 +149,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 just(Whitespace)
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .ignore_then(parameters.clone())
                     .or_not(),
             )
             .then_ignore(one_of([SingleNewline, Newlines]))
@@ -165,11 +165,6 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     };
 
     let ranged_tag = |c: char| {
-        let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
-            .repeated()
-            .at_least(1)
-            .separated_by(just(Whitespace).repeated().at_least(1));
-
         let parse_char = select! { Special(x) if x == c => x };
 
         parse_char
@@ -182,7 +177,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 just(Whitespace)
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .ignore_then(parameters.clone())
                     .or_not(),
             )
             .then_ignore(one_of([SingleNewline, Newlines]))
@@ -194,11 +189,6 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     };
 
     let infirm_tag = {
-        let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
-            .repeated()
-            .at_least(1)
-            .separated_by(just(Whitespace).repeated().at_least(1));
-
         select! { Special('.') => '.' }
             .ignore_then(
                 none_of([Newlines, SingleNewline, Eof, Whitespace])
@@ -209,7 +199,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 just(Whitespace)
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .ignore_then(parameters.clone())
                     .or_not(),
             )
             .then_ignore(one_of([SingleNewline, Newlines]))
@@ -217,11 +207,6 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     };
 
     let carryover_tags = {
-        let parameters = none_of([Newlines, SingleNewline, Eof, Whitespace])
-            .repeated()
-            .at_least(1)
-            .separated_by(just(Whitespace).repeated().at_least(1));
-
         select! {
             Special('+') => '+',
             Special('#') => '#',
@@ -235,7 +220,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             just(Whitespace)
                 .repeated()
                 .at_least(1)
-                .ignore_then(parameters)
+                .ignore_then(parameters.clone())
                 .or_not(),
         )
         .then_ignore(one_of([SingleNewline, Newlines]))
