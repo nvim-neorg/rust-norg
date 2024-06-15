@@ -7,34 +7,29 @@ expression: examples
       title:
         - Text: Heading
       extensions: []
-      content: []
 - - Heading:
       level: 9
       title:
         - Text: Heading
       extensions: []
-      content: []
 - - Heading:
       level: 1
       title:
         - Text: Heading
       extensions: []
-      content:
-        - Paragraph:
-            - Text: content
-            - Special: "."
+  - Paragraph:
+      - Text: content
+      - Special: "."
 - - Heading:
       level: 7
       title:
         - Text: Heading
       extensions: []
-      content: []
 - - Heading:
       level: 1
       title:
         - Text: Heading
       extensions: []
-      content: []
   - Heading:
       level: 1
       title:
@@ -42,19 +37,16 @@ expression: examples
         - Whitespace
         - Text: heading
       extensions: []
-      content: []
 - - Heading:
       level: 1
       title:
         - Text: Heading
       extensions: []
-      content: []
   - Heading:
       level: 2
       title:
         - Text: Subheading
       extensions: []
-      content: []
   - Heading:
       level: 1
       title:
@@ -66,33 +58,30 @@ expression: examples
         - Whitespace
         - Text: heading
       extensions: []
-      content: []
 - - Heading:
       level: 1
       title:
         - Text: Heading
       extensions: []
-      content:
-        - Paragraph:
-            - Text: sneaky
-            - Whitespace
-            - Text: content
-            - Special: "."
+  - Paragraph:
+      - Text: sneaky
+      - Whitespace
+      - Text: content
+      - Special: "."
   - Heading:
       level: 2
       title:
         - Text: Subheading
       extensions: []
-      content:
-        - Paragraph:
-            - Text: more
-            - Whitespace
-            - Text: sneaky
-            - Whitespace
-            - Text: content
-            - Whitespace
-            - Text: inside
-            - Special: "."
+  - Paragraph:
+      - Text: more
+      - Whitespace
+      - Text: sneaky
+      - Whitespace
+      - Text: content
+      - Whitespace
+      - Text: inside
+      - Special: "."
   - Heading:
       level: 1
       title:
@@ -104,4 +93,3 @@ expression: examples
         - Whitespace
         - Text: heading
       extensions: []
-      content: []

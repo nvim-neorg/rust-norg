@@ -338,6 +338,11 @@ mod tests {
             r#"|example
                * Hello world!
                |end"#,
+            r#"|example
+               |example
+               * Hello world!
+               |end
+               |end"#,
             r#"=example
                Hello world!
                =end"#,
@@ -350,6 +355,11 @@ mod tests {
                =end"#,
             r#"=example
                * Hello world!
+               =end"#,
+            r#"=example
+               =example
+               * Hello world!
+               =end
                =end"#,
         ]
         .into_iter()

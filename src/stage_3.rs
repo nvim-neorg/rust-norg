@@ -100,7 +100,6 @@ pub enum NorgASTFlat {
         level: u16,
         title: Vec<NorgToken>,
         extensions: Vec<DetachedModifierExtension>,
-        content: Vec<Self>,
     },
     CarryoverTag {
         tag_type: CarryoverTag,
@@ -246,19 +245,14 @@ pub fn stage_3() -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::er
                     Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
                 });
 
-        let stage_3_clone = stage_3.clone();
-
-        // TODO(vhyrro): Proper error handling here, properly make headings non-self-consuming
-        let heading = recursive(|heading| select! {
+        let heading = select! {
             NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
         }
-        .then(heading.not().repeated())
-        .try_map(move |((level, title, extension_section), content), _span| Ok(NorgASTFlat::Heading {
+        .try_map(move |(level, title, extension_section), _span| Ok(NorgASTFlat::Heading {
             level,
             title,
             extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
-            content: stage_3_clone.clone().repeated().parse(content).unwrap_or_default(),
-        })));
+        }));
 
         let stringify_tokens = |tokens: Vec<NorgToken>| -> String {
             tokens.into_iter().map(|token| match token {
