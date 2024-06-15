@@ -7,42 +7,54 @@ use serde::Serialize;
 use crate::stage_1::NorgToken;
 use chumsky::prelude::*;
 
+/// Represents various Norg blocks parsed from tokens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum NorgBlock {
+    /// A segment of a paragraph consisting of Norg tokens.
     ParagraphSegment(Vec<NorgToken>),
+    /// End of a paragraph segment.
     ParagraphSegmentEnd(Vec<NorgToken>),
+    /// A heading with a specified level, title, and optional extension section.
     Heading {
         level: u16,
         title: Vec<NorgToken>,
         extension_section: Vec<NorgToken>,
     },
+    /// A nestable detached modifier with a type, level, and optional extension section.
     NestableDetachedModifier {
         modifier_type: char,
         level: u16,
         extension_section: Vec<NorgToken>,
     },
+    /// A rangeable detached modifier with an indication if it is ranged, type, title, and optional extension section.
     RangeableDetachedModifier {
         ranged: bool,
         modifier_type: char,
         title: Vec<NorgToken>,
         extension_section: Vec<NorgToken>,
     },
+    /// Closing tag for a rangeable detached modifier.
     RangeableDetachedModifierClose(char),
+    /// A ranged tag with a type, name, and optional parameters.
     RangedTag {
         tag_type: char,
         name: Vec<NorgToken>,
         parameters: Option<Vec<Vec<NorgToken>>>,
     },
+    /// End of a ranged tag.
     RangedTagEnd(char),
+    /// A verbatim ranged tag with a name, optional parameters, and content.
     VerbatimRangedTag {
         name: Vec<NorgToken>,
         parameters: Option<Vec<Vec<NorgToken>>>,
         content: Vec<NorgToken>,
     },
+    /// An infirm tag with a name and optional parameters.
     InfirmTag {
         name: Vec<NorgToken>,
         parameters: Option<Vec<Vec<NorgToken>>>,
     },
+    /// A carryover tag with a type, name, and optional parameters.
     CarryoverTag {
         tag_type: char,
         name: Vec<NorgToken>,
@@ -50,6 +62,12 @@ pub enum NorgBlock {
     },
 }
 
+/// Defines the parser for stage 2 of the Norg parsing process, which converts tokens into blocks.
+///
+/// # Returns
+///
+/// * A parser that processes `NorgToken`s into a vector of `NorgBlock`s, which properly define
+///   paragraph boundaries.
 pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::error::Simple<NorgToken>>
 {
     use NorgToken::*;

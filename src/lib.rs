@@ -1,77 +1,72 @@
+use chumsky::{error::Simple, Parser as _};
+use stage_1::NorgToken;
+use stage_2::NorgBlock;
+use stage_3::NorgASTFlat;
+
 use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
 use crate::stage_3::stage_3;
-use chumsky::Parser as _;
-use clap::Parser;
-use eyre::Result;
-use std::path::PathBuf;
 
 mod stage_1;
 mod stage_2;
 mod stage_3;
 
-#[derive(Parser)]
-/// A compiler for the ef language.
-struct Norg {
-    /// The file to compile.
-    file: PathBuf,
+/// Represents errors that can occur during the parsing process across different stages.
+pub enum NorgParseError {
+    Stage1(Vec<Simple<char>>),
+    Stage2(Vec<Simple<NorgToken>>),
+    Stage3(Vec<Simple<NorgBlock>>),
 }
 
-fn main() -> Result<()> {
-    let parser = Norg::parse();
-
-    let content = String::from_utf8(std::fs::read(parser.file)?)?;
-
-    // println!(
-    //     "{:?}",
-    //     stage_1().parse_recovery(content.clone()).0.expect("Failed")
-    // );
-
-    println!("-----------------------");
-
-    println!(
-        "{:#?}",
-        stage_2()
-            .parse_recovery(
-                stage_1()
-                    .parse_recovery(content.clone())
-                    .0
-                    .expect("Failed stage_1")
-            )
-            .0
-            .expect("Failed stage 2")
-    );
-
-    println!("-----------------------");
-
-    println!(
-        "{:#?}",
-        stage_3()
-            .parse(
-                stage_2()
-                    .parse(stage_1().parse_recovery(content).0.expect("Failed stage_1"))
-                    .unwrap()
-            )
-            .expect("Failed stage 3")
-    );
-
-    Ok(())
+impl From<Vec<Simple<char>>> for NorgParseError {
+    fn from(error: Vec<Simple<char>>) -> Self {
+        NorgParseError::Stage1(error)
+    }
 }
 
-// TODO(vhyrro): Create a large amount of test cases
+impl From<Vec<Simple<NorgToken>>> for NorgParseError {
+    fn from(error: Vec<Simple<NorgToken>>) -> Self {
+        NorgParseError::Stage2(error)
+    }
+}
+
+impl From<Vec<Simple<NorgBlock>>> for NorgParseError {
+    fn from(error: Vec<Simple<NorgBlock>>) -> Self {
+        NorgParseError::Stage3(error)
+    }
+}
+
+/// Parses the given input string through multiple stages to produce a flattened abstract syntax tree (AST).
+///
+/// # Arguments
+///
+/// * `input` - A string slice that holds the input to be parsed.
+///
+/// # Returns
+///
+/// * `Ok(Vec<NorgASTFlat>)` if parsing is successful.
+/// * `Err(NorgParseError)` if any stage of parsing fails.
+pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
+    Ok(stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?)
+}
+
 #[cfg(test)]
 mod tests {
     use chumsky::Parser;
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
 
-    use crate::stage_3::{stage_3, NorgASTFlat};
+    use crate::{
+        stage_1::stage_1,
+        stage_2::stage_2,
+        stage_3::{stage_3, NorgASTFlat},
+    };
 
     fn parse(content: String) -> Vec<NorgASTFlat> {
         stage_3()
             .parse(
-                crate::stage_2()
-                    .parse(crate::stage_1().parse(content).expect("lexing failed"))
+                stage_2()
+                    .parse(stage_1().parse(content).expect("lexing failed"))
                     .expect("block level failed"),
             )
             .expect("stage 3 failed")

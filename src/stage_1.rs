@@ -23,7 +23,7 @@ pub enum NorgToken {
 /// A list of characters which are considered "special", i.e. for parsing of attached modifiers.
 const SPECIAL_CHARS: &str = "*-~/_!%^,\"'$:@|=.#+<>()[]{}";
 
-/// Parsers a `.norg` document and breaks it up into tokens.
+/// Parses a `.norg` document and breaks it up into tokens.
 pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
     let ws = filter(|c: &char| c.is_inline_whitespace())
         .repeated()

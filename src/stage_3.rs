@@ -4,22 +4,22 @@ use serde::Serialize;
 
 use crate::{stage_1::NorgToken, stage_2::NorgBlock};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum NestableDetachedModifier {
+#[derive(PartialEq, Serialize)]
+pub enum NestableDetachedModifier {
     Quote,
     UnorderedList,
     OrderedList,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum RangeableDetachedModifier {
+#[derive(PartialEq, Serialize)]
+pub enum RangeableDetachedModifier {
     Definition,
     Footnote,
     Table,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum TodoStatus {
+#[derive(PartialEq, Serialize)]
+pub enum TodoStatus {
     /// ` `
     Undone,
     /// `x`
@@ -38,8 +38,8 @@ pub(crate) enum TodoStatus {
     Canceled,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum DetachedModifierExtension {
+#[derive(PartialEq, Serialize)]
+pub enum DetachedModifierExtension {
     /// todo item status:
     /// `- ( ) undone`
     /// `- (x) done`
@@ -69,19 +69,19 @@ pub(crate) enum DetachedModifierExtension {
     StartDate(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum CarryoverTag {
+#[derive(PartialEq, Serialize)]
+pub enum CarryoverTag {
     Attribute, // `+`
     Macro,     // `#`
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub(crate) enum RangedTag {
+#[derive(PartialEq, Serialize)]
+pub enum RangedTag {
     Macro,
     Standard,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(PartialEq, Serialize)]
 pub enum NorgASTFlat {
     Paragraph(Vec<NorgToken>),
     NestableDetachedModifier {
