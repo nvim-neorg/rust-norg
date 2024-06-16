@@ -97,6 +97,18 @@ mod tests {
     }
 
     #[test]
+    fn lists_regressions() {
+        [
+             "- - a list item",
+             "---- - a list item",
+             "---- > a list item",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .for_each(|str| { parse(&str).unwrap_err(); });
+    }
+
+    #[test]
     fn ordered_lists() {
         let examples: Vec<_> = [
             "~ Test list",
@@ -110,7 +122,6 @@ mod tests {
                 ~~~ Test list
             ",
             "~~~not list",
-            // "~ ~ a list item",
             "~~> not a list",
         ]
         .into_iter()
@@ -120,6 +131,18 @@ mod tests {
         .unwrap();
 
         assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn ordered_lists_regressions() {
+        [
+             "~ ~ a list item",
+             "~~~~ - a list item",
+             "~~~~ > a list item",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .for_each(|str| { parse(&str).unwrap_err(); });
     }
 
     #[test]
@@ -148,7 +171,18 @@ mod tests {
         assert_yaml_snapshot!(examples);
     }
 
-    // TODO(vhyrro): Add regression tests too
+    #[test]
+    fn quotes_regressions() {
+        [
+             "> > a list item",
+             ">>>> - a list item",
+             ">>>> ~ a list item",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .for_each(|str| { parse(&str).unwrap_err(); });
+    }
+
     #[test]
     fn definitions() {
         let examples: Vec<_> = [
@@ -164,6 +198,11 @@ mod tests {
         .try_collect()
         .unwrap();
 
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn definitions_regressions() {
         [
             "$ Term Definition",
             "$$ Term
@@ -177,10 +216,7 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(|str| parse(&str).unwrap_err())
-        .collect_vec();
-
-        assert_yaml_snapshot!(examples);
+        .for_each(|str| { parse(&str).unwrap_err(); });
     }
 
     #[test]
@@ -202,6 +238,24 @@ mod tests {
     }
 
     #[test]
+    fn footnotes_regressions() {
+        [
+            "^ Term Definition",
+            "^^ Term
+                Long definition ^^",
+            "^^ Term
+                Long definition
+             ^^text",
+            "^^ Term
+                Long definition
+             ^^ text",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .for_each(|str| { parse(&str).unwrap_err(); });
+    }
+
+    #[test]
     fn tables() {
         let examples: Vec<_> = [
             ": A1
@@ -218,6 +272,25 @@ mod tests {
 
         assert_yaml_snapshot!(examples);
     }
+
+    #[test]
+    fn tables_regressions() {
+        [
+            ": Term Definition",
+            ":: Term
+                Long definition ::",
+            ":: Term
+                Long definition
+             ::text",
+            ":: Term
+                Long definition
+             :: text",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .for_each(|str| { parse(&str).unwrap_err(); });
+    }
+
 
     // TODO(vhyrro): Maybe proptests here?
     #[test]
