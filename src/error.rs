@@ -3,6 +3,7 @@ use chumsky::error::Simple;
 use crate::{stage_1::NorgToken, stage_2::NorgBlock};
 
 /// Represents errors that can occur during the parsing process across different stages.
+#[derive(Debug)]
 pub enum NorgParseError {
     Stage1(Vec<Simple<char>>),
     Stage2(Vec<Simple<NorgToken>>),

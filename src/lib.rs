@@ -27,29 +27,14 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 
 #[cfg(test)]
 mod tests {
-    use chumsky::Parser;
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
 
-    use crate::{
-        stage_1::stage_1,
-        stage_2::stage_2,
-        stage_3::{stage_3, NorgASTFlat},
-    };
-
-    fn parse(content: String) -> Vec<NorgASTFlat> {
-        stage_3()
-            .parse(
-                stage_2()
-                    .parse(stage_1().parse(content).expect("lexing failed"))
-                    .expect("block level failed"),
-            )
-            .expect("stage 3 failed")
-    }
+    use crate::parse;
 
     #[test]
     fn headings() {
-        let examples = [
+        let examples: Vec<_> = [
             "* Heading",
             "********* Heading",
             "
@@ -78,15 +63,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn lists() {
-        let examples = [
+        let examples: Vec<_> = [
             "- Test list",
             "---- Test list",
             "
@@ -103,15 +89,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn ordered_lists() {
-        let examples = [
+        let examples: Vec<_> = [
             "~ Test list",
             "~~~~ Test list",
             "
@@ -128,15 +115,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn quotes() {
-        let examples = [
+        let examples: Vec<_> = [
             "> Test quote",
             ">>>> Test quote",
             "
@@ -153,8 +141,9 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
@@ -162,7 +151,7 @@ mod tests {
     // TODO(vhyrro): Add regression tests too
     #[test]
     fn definitions() {
-        let examples = [
+        let examples: Vec<_> = [
             "$ Term
                Definition",
             "$$ Term
@@ -171,15 +160,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn footnotes() {
-        let examples = [
+        let examples: Vec<_> = [
             "^ Title
                Content",
             "^^ Title
@@ -188,15 +178,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn tables() {
-        let examples = [
+        let examples: Vec<_> = [
             ": A1
                Cell content",
             ":: A1
@@ -205,8 +196,9 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
@@ -214,7 +206,7 @@ mod tests {
     // TODO(vhyrro): Maybe proptests here?
     #[test]
     fn infirm_tags() {
-        let examples = [
+        let examples: Vec<_> = [
             ".tag",
             ".tag-name_with-complexchars",
             ".tag-name_ parameter",
@@ -224,15 +216,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn carryover_tags() {
-        let examples = [
+        let examples: Vec<_> = [
             "+tag
              paragraph",
             "+tag-name_with-complexchars
@@ -260,15 +253,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn ranged_verbatim_tags() {
-        let examples = [
+        let examples: Vec<_> = [
             r#"@code
                print("Hello world!")
                @end"#,
@@ -286,15 +280,16 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
 
     #[test]
     fn verbatim_tags() {
-        let examples = [
+        let examples: Vec<_> = [
             r#"|example
                Hello world!
                |end"#,
@@ -334,8 +329,9 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .map(parse)
-        .collect_vec();
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
 
         assert_yaml_snapshot!(examples);
     }
