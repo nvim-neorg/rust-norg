@@ -1,40 +1,15 @@
-use chumsky::{error::Simple, Parser as _};
-use stage_1::NorgToken;
-use stage_2::NorgBlock;
+use chumsky::Parser as _;
+use error::NorgParseError;
 use stage_3::NorgASTFlat;
 
 use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
 use crate::stage_3::stage_3;
 
+mod error;
 mod stage_1;
 mod stage_2;
 mod stage_3;
-
-/// Represents errors that can occur during the parsing process across different stages.
-pub enum NorgParseError {
-    Stage1(Vec<Simple<char>>),
-    Stage2(Vec<Simple<NorgToken>>),
-    Stage3(Vec<Simple<NorgBlock>>),
-}
-
-impl From<Vec<Simple<char>>> for NorgParseError {
-    fn from(error: Vec<Simple<char>>) -> Self {
-        NorgParseError::Stage1(error)
-    }
-}
-
-impl From<Vec<Simple<NorgToken>>> for NorgParseError {
-    fn from(error: Vec<Simple<NorgToken>>) -> Self {
-        NorgParseError::Stage2(error)
-    }
-}
-
-impl From<Vec<Simple<NorgBlock>>> for NorgParseError {
-    fn from(error: Vec<Simple<NorgBlock>>) -> Self {
-        NorgParseError::Stage3(error)
-    }
-}
 
 /// Parses the given input string through multiple stages to produce a flattened abstract syntax tree (AST).
 ///
