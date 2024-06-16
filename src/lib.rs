@@ -164,6 +164,22 @@ mod tests {
         .try_collect()
         .unwrap();
 
+        [
+            "$ Term Definition",
+            "$$ Term
+                Long definition $$",
+            "$$ Term
+                Long definition
+             $$text",
+            "$$ Term
+                Long definition
+             $$ text",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str).unwrap_err())
+        .collect_vec();
+
         assert_yaml_snapshot!(examples);
     }
 
