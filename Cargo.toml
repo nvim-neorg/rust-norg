@@ -10,3 +10,4 @@ serde = { version = "1.0.203", features = ["derive"] }
 
 [dev-dependencies]
 insta = { version = "1.39.0", features = ["yaml"] }
+proptest = "1.4.0"

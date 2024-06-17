@@ -25,6 +25,7 @@ const SPECIAL_CHARS: &str = "*-~/_!%^,\"'$:@|=.#+<>()[]{}";
 
 /// Parses a `.norg` document and breaks it up into tokens.
 pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
+    // FIXME(vhyrro): `is_inline_whitespace` does not, in any way, respect unicode whitespace characters.
     let ws = filter(|c: &char| c.is_inline_whitespace())
         .repeated()
         .at_least(1)

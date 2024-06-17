@@ -27,10 +27,12 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 
 #[cfg(test)]
 mod tests {
+    use chumsky::Parser;
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
+    use proptest::prop_assert;
 
-    use crate::parse;
+    use crate::{parse, stage_1::stage_1};
 
     #[test]
     fn headings() {
@@ -292,7 +294,6 @@ mod tests {
     }
 
 
-    // TODO(vhyrro): Maybe proptests here?
     #[test]
     fn infirm_tags() {
         let examples: Vec<_> = [
@@ -310,6 +311,16 @@ mod tests {
         .unwrap();
 
         assert_yaml_snapshot!(examples);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn infirm_tags_proptests(tag_name in r"[\w_\-\.\d]+", parameter in r"[^\s]+", multi_parameter in r"[^\n\r]+") {
+            let tag = format!(".{} {} {}\n", tag_name, parameter, multi_parameter);
+
+            // TODO: Ensure that the number of parameters parsed is correct?
+            parse(&tag).unwrap();
+        }
     }
 
     #[test]
