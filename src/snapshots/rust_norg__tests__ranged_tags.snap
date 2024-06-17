@@ -1,0 +1,160 @@
+---
+source: src/lib.rs
+expression: examples
+---
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - Paragraph:
+            - Text: Hello
+            - Whitespace
+            - Text: world
+            - Special: "!"
+- - RangedTag:
+      name:
+        - example
+        - some-text
+        - here
+      parameters:
+        - one parameter
+        - second-parameter
+      content:
+        - CarryoverTag:
+            tag_type: Macro
+            name:
+              - carryover
+            parameters: []
+            next_object:
+              Paragraph:
+                - Text: text
+                - Whitespace
+                - Text: within
+- - RangedTag:
+      name:
+        - some-complex_tag_
+      parameters:
+        - first-parameter
+        - "#&*(&$!)"
+        - third-parameter
+      content:
+        - Paragraph:
+            - Text: this
+            - Whitespace
+            - Text: is
+            - Whitespace
+            - Text: some
+            - Whitespace
+            - Text: text
+            - Whitespace
+            - Text: within
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - Heading:
+            level: 1
+            title:
+              - Text: Hello
+              - Whitespace
+              - Text: world
+              - Special: "!"
+            extensions: []
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - RangedTag:
+            name:
+              - example
+            parameters: []
+            content:
+              - Heading:
+                  level: 1
+                  title:
+                    - Text: Hello
+                    - Whitespace
+                    - Text: world
+                    - Special: "!"
+                  extensions: []
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - Paragraph:
+            - Text: Hello
+            - Whitespace
+            - Text: world
+            - Special: "!"
+- - RangedTag:
+      name:
+        - example
+        - some-text
+        - here
+      parameters:
+        - one parameter
+        - second-parameter
+      content:
+        - CarryoverTag:
+            tag_type: Macro
+            name:
+              - carryover
+            parameters: []
+            next_object:
+              Paragraph:
+                - Text: text
+                - Whitespace
+                - Text: within
+- - RangedTag:
+      name:
+        - some-complex_tag_
+      parameters:
+        - first-parameter
+        - "#&*(&$!)"
+        - third-parameter
+      content:
+        - Paragraph:
+            - Text: this
+            - Whitespace
+            - Text: is
+            - Whitespace
+            - Text: some
+            - Whitespace
+            - Text: text
+            - Whitespace
+            - Text: within
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - Heading:
+            level: 1
+            title:
+              - Text: Hello
+              - Whitespace
+              - Text: world
+              - Special: "!"
+            extensions: []
+- - RangedTag:
+      name:
+        - example
+      parameters: []
+      content:
+        - RangedTag:
+            name:
+              - example
+            parameters: []
+            content:
+              - Heading:
+                  level: 1
+                  title:
+                    - Text: Hello
+                    - Whitespace
+                    - Text: world
+                    - Special: "!"
+                  extensions: []

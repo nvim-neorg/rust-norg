@@ -1,22 +1,12 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - VerbatimRangedTag:
       name:
         - code
       parameters: []
-      content:
-        - Text: print
-        - Special: (
-        - Special: "\""
-        - Text: Hello
-        - Whitespace
-        - Text: world
-        - Special: "!"
-        - Special: "\""
-        - Special: )
-        - SingleNewline
+      content: "print(\"Hello world!\")\n"
 - - VerbatimRangedTag:
       name:
         - code
@@ -25,17 +15,7 @@ expression: examples
       parameters:
         - lua language
         - second-parameter
-      content:
-        - Text: print
-        - Special: (
-        - Special: "\""
-        - Text: Hello
-        - Whitespace
-        - Text: world
-        - Special: "!"
-        - Special: "\""
-        - Special: )
-        - SingleNewline
+      content: "print(\"Hello world!\")\n"
 - - VerbatimRangedTag:
       name:
         - some-complex_tag_
@@ -43,25 +23,4 @@ expression: examples
         - first-parameter
         - "#&*(&$!)"
         - third-parameter
-      content:
-        - Text: function
-        - Whitespace
-        - Text: hello
-        - Special: (
-        - Special: )
-        - SingleNewline
-        - Text: print
-        - Special: (
-        - Special: "\""
-        - Text: Hello
-        - Whitespace
-        - Text: World
-        - Special: "\""
-        - Special: )
-        - SingleNewline
-        - Text: end
-        - Newlines
-        - Text: hello
-        - Special: (
-        - Special: )
-        - SingleNewline
+      content: "function hello()\nprint(\"Hello World\")\nend  hello()\n"

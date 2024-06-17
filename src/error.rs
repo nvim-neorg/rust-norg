@@ -27,4 +27,3 @@ impl From<Vec<Simple<NorgBlock>>> for NorgParseError {
         NorgParseError::Stage3(error)
     }
 }
-

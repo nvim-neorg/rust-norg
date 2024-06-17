@@ -27,12 +27,10 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 
 #[cfg(test)]
 mod tests {
-    use chumsky::Parser;
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
-    use proptest::prop_assert;
 
-    use crate::{parse, stage_1::stage_1};
+    use crate::parse;
 
     #[test]
     fn headings() {
@@ -101,13 +99,15 @@ mod tests {
     #[test]
     fn lists_regressions() {
         [
-             "- - a list item",
-             "---- - a list item",
-             "---- > a list item",
+            "- - a list item",
+            "---- - a list item",
+            "---- > a list item",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
 
     #[test]
@@ -138,13 +138,15 @@ mod tests {
     #[test]
     fn ordered_lists_regressions() {
         [
-             "~ ~ a list item",
-             "~~~~ - a list item",
-             "~~~~ > a list item",
+            "~ ~ a list item",
+            "~~~~ - a list item",
+            "~~~~ > a list item",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
 
     #[test]
@@ -176,13 +178,15 @@ mod tests {
     #[test]
     fn quotes_regressions() {
         [
-             "> > a list item",
-             ">>>> - a list item",
-             ">>>> ~ a list item",
+            "> > a list item",
+            ">>>> - a list item",
+            ">>>> ~ a list item",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
 
     #[test]
@@ -218,7 +222,9 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
 
     #[test]
@@ -254,7 +260,9 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
 
     #[test]
@@ -290,9 +298,10 @@ mod tests {
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
-        .for_each(|str| { parse(&str).unwrap_err(); });
+        .for_each(|str| {
+            parse(&str).unwrap_err();
+        });
     }
-
 
     #[test]
     fn infirm_tags() {
@@ -388,7 +397,7 @@ mod tests {
     }
 
     #[test]
-    fn verbatim_tags() {
+    fn ranged_tags() {
         let examples: Vec<_> = [
             r#"|example
                Hello world!

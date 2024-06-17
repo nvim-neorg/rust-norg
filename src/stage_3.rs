@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use itertools::Itertools;
 use serde::Serialize;
 
-use crate::{stage_1::NorgToken, stage_2::NorgBlock};
+use crate::stage_2::{NorgBlock, ParagraphSegment, ParagraphSegmentToken};
 
 #[derive(Debug, PartialEq, Serialize)]
 pub enum NestableDetachedModifier {
@@ -83,7 +83,7 @@ pub enum RangedTag {
 
 #[derive(Debug, PartialEq, Serialize)]
 pub enum NorgASTFlat {
-    Paragraph(Vec<NorgToken>),
+    Paragraph(ParagraphSegment),
     NestableDetachedModifier {
         modifier_type: NestableDetachedModifier,
         level: u16,
@@ -92,13 +92,13 @@ pub enum NorgASTFlat {
     },
     RangeableDetachedModifier {
         modifier_type: RangeableDetachedModifier,
-        title: Vec<NorgToken>,
+        title: ParagraphSegment,
         extensions: Vec<DetachedModifierExtension>,
         content: Vec<Self>,
     },
     Heading {
         level: u16,
-        title: Vec<NorgToken>,
+        title: ParagraphSegment,
         extensions: Vec<DetachedModifierExtension>,
     },
     CarryoverTag {
@@ -110,7 +110,7 @@ pub enum NorgASTFlat {
     VerbatimRangedTag {
         name: Vec<String>,
         parameters: Vec<String>,
-        content: Vec<NorgToken>,
+        content: String,
     },
     RangedTag {
         name: Vec<String>,
@@ -123,34 +123,35 @@ pub enum NorgASTFlat {
     },
 }
 
-fn detached_modifier_extensions(
-) -> impl Parser<NorgToken, Vec<DetachedModifierExtension>, Error = chumsky::error::Simple<NorgToken>>
-{
-    use NorgToken::*;
+fn detached_modifier_extensions() -> impl Parser<
+    ParagraphSegmentToken,
+    Vec<DetachedModifierExtension>,
+    Error = chumsky::error::Simple<ParagraphSegmentToken>,
+> {
+    use ParagraphSegmentToken::*;
 
     let detached_modifier_extension_tokens = select! {
         c @ Special('@' | '#' | '<' | '>' | '+' | '=' | '_' | '-' | '!') => c,
         Whitespace => Whitespace,
-        Text(str) if str == "x" || str == "?" => Text(str),
+        Text(c) if c == "x" || c == "?" => Text(c),
     };
 
     let detached_modifier_extension = detached_modifier_extension_tokens
         .then(
             just(Whitespace)
-                .ignore_then(none_of([Special('|'), Eof, SingleNewline, Newlines]).repeated())
+                .ignore_then(select!(Special('|') => Special('|')).repeated())
                 .or_not()
                 .map(|tokens| {
                     if let Some(tokens) = tokens {
                         tokens
                             .iter()
-                            .filter_map(|spec| match spec {
-                                Special(char) => Some(char.to_string()),
-                                Text(txt) => Some(txt.to_string()),
-                                Escape(char) => Some(char.to_string()),
-                                Whitespace => Some(" ".to_string()),
-                                _ => None,
+                            .map(|spec| match spec {
+                                Special(char) => char.to_string(),
+                                Text(str) => str.to_owned(),
+                                Escape(char) => format!(r"\{}", char),
+                                Whitespace => ' '.to_string(),
                             })
-                            .join("")
+                            .collect()
                     } else {
                         String::from("")
                     }
@@ -173,8 +174,10 @@ fn detached_modifier_extensions(
             Special('-') => DetachedModifierExtension::Todo(TodoStatus::Pending),
             Special('!') => DetachedModifierExtension::Todo(TodoStatus::Urgent),
             Whitespace => DetachedModifierExtension::Todo(TodoStatus::Undone),
-            Text(x) if x == "x" => DetachedModifierExtension::Todo(TodoStatus::Done),
-            Text(x) if x == "?" => DetachedModifierExtension::Todo(TodoStatus::NeedsClarification),
+            Text(str) if str == "x" => DetachedModifierExtension::Todo(TodoStatus::Done),
+            Text(str) if str == "?" => {
+                DetachedModifierExtension::Todo(TodoStatus::NeedsClarification)
+            }
             _ => unreachable!(),
         });
 
@@ -223,7 +226,7 @@ pub fn stage_3(
                 modifier_type,
                 title,
                 extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
-                content: Vec::from([paragraph]),
+                content: vec![paragraph],
             });
 
         let ranged_detached_modifier = select! {
@@ -254,16 +257,8 @@ pub fn stage_3(
             extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
         }));
 
-        let stringify_tokens = |tokens: Vec<NorgToken>| -> String {
-            tokens.into_iter().map(|token| match token {
-                NorgToken::Text(txt) => txt,
-                NorgToken::Special(c) | NorgToken::Escape(c) => c.to_string(),
-                _ => unreachable!(),
-            }).collect::<String>()
-        };
-
-        let stringify_tokens_and_split = move |tokens: Vec<NorgToken>| -> Vec<String> {
-            stringify_tokens(tokens).split('.').map_into().collect()
+        let stringify_tokens_and_split = move |tokens: ParagraphSegment| -> Vec<String> {
+            tokens.into_iter().map_into::<String>().collect::<String>().split('.').map_into().collect()
         };
 
         let carryover_tag = select! {
@@ -273,7 +268,7 @@ pub fn stage_3(
                 NorgASTFlat::CarryoverTag {
                     tag_type,
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect(),
+                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
                     next_object: Box::new(next_object),
                 }
             });
@@ -282,26 +277,26 @@ pub fn stage_3(
             NorgBlock::VerbatimRangedTag { name, parameters, content } => {
                 NorgASTFlat::VerbatimRangedTag {
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect(),
-                    content,
+                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
+                    content: content.into_iter().map_into::<String>().collect(),
                 }
             },
         };
 
         let ranged_tag = select! {
-            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect()),
-            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect())
+            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect()),
+            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect())
         }.then(stage_3.repeated()).then(select! {
             NorgBlock::RangedTagEnd('=') => RangedTag::Macro,
             NorgBlock::RangedTagEnd('|') => RangedTag::Standard,
         }).try_map(|(((tag_type, name, parameters), content), closing_tag_type), span| if tag_type == closing_tag_type {
-                Ok(NorgASTFlat::RangedTag { name, parameters, content })
-            } else {
-                    Err(Simple::custom(span, "Invalid closing modifier for ranged tag.")) // TODO: Improve errors
-                });
+            Ok(NorgASTFlat::RangedTag { name, parameters, content })
+        } else {
+            Err(Simple::custom(span, "Invalid closing modifier for ranged tag.")) // TODO: Improve errors
+        });
 
         let infirm_tag = select! {
-            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_else(Vec::new).into_iter().map(stringify_tokens).collect() },
+            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect() },
         };
 
         choice((
