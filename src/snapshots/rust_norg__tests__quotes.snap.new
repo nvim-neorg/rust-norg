@@ -1,0 +1,121 @@
+---
+source: src/lib.rs
+assertion_line: 182
+expression: examples
+---
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 4
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+- - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+  - NestableDetachedModifier:
+      modifier_type: Quote
+      level: 3
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: quote
+- - Paragraph:
+      - Token:
+          Special: ">"
+      - Token:
+          Special: ">"
+      - Token:
+          Special: ">"
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: quote
+- - Paragraph:
+      - Token:
+          Special: ">"
+      - Token:
+          Special: ">"
+      - Token:
+          Special: "-"
+      - Token: Whitespace
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: quote

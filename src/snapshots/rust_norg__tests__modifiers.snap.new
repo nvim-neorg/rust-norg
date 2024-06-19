@@ -1,0 +1,32 @@
+---
+source: src/lib.rs
+assertion_line: 535
+expression: examples
+---
+- - Paragraph:
+      - Token:
+          Text: hello
+      - Token: Whitespace
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: hello
+            - Token: Whitespace
+            - AttachedModifier:
+                modifier_type: /
+                content:
+                  - Token:
+                      Text: world
+            - Token: Whitespace
+            - Token:
+                Text: man
+      - Token: Whitespace
+      - Token:
+          Text: how
+      - Token: Whitespace
+      - Token:
+          Text: are
+      - Token: Whitespace
+      - Token:
+          Text: you?
