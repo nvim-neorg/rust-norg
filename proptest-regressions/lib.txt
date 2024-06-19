@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc fb9b5df4fe46fe331cc3aa40bba6501c1c603084688fd02dda6d1c73106c1324 # shrinks to tag_name = "A", parameter = "A", multi_parameter = "\u{b}"
+cc 28afae9872324ba0632a8023219e32939580363ce8b99752dc19fae0ac5b63d1 # shrinks to paragraph_content = " "

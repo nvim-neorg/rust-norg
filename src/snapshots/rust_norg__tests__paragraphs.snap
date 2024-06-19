@@ -1,0 +1,38 @@
+---
+source: src/lib.rs
+expression: examples
+---
+- - Paragraph:
+      - Text: hello
+      - Special: ","
+      - Whitespace
+      - Text: world
+      - Special: "!"
+- - Paragraph:
+      - Special: "*"
+      - Text: hello
+      - Special: ","
+      - Whitespace
+      - Text: world
+      - Special: "!"
+      - Special: "*"
+- - Paragraph:
+      - Special: "*"
+      - Text: hello
+      - Special: ","
+      - Text: world
+      - Special: "!"
+      - Special: "*"
+- - Paragraph:
+      - Text: two
+  - Paragraph:
+      - Text: paragraphs
+- - Paragraph:
+      - Text: paragraph
+      - Text: here
+  - Paragraph:
+      - Text: another
+      - Whitespace
+      - Text: paragraph
+      - Text: here
+      - Special: "."

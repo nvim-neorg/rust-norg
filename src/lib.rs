@@ -29,8 +29,15 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 mod tests {
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
+    use proptest::{prop_oneof, proptest};
 
     use crate::parse;
+
+    const TAG_NAME_REGEX: &str = r"[\w_\-\.\d]+";
+    const TAG_PARAMETER_REGEX: &str = r"[^\s]+";
+    const TAG_MULTI_PARAMETER_REGEX: &str = r"[^\n\r]+";
+
+    const PARAGRAPH_REGEX: &str = r"[^[:punct:]\s][^\n\r]*";
 
     #[test]
     fn headings() {
@@ -322,9 +329,9 @@ mod tests {
         assert_yaml_snapshot!(examples);
     }
 
-    proptest::proptest! {
+    proptest! {
         #[test]
-        fn infirm_tags_proptests(tag_name in r"[\w_\-\.\d]+", parameter in r"[^\s]+", multi_parameter in r"[^\n\r]+") {
+        fn infirm_tags_proptests(tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX) {
             let tag = format!(".{} {} {}\n", tag_name, parameter, multi_parameter);
 
             // TODO: Ensure that the number of parameters parsed is correct?
@@ -369,6 +376,15 @@ mod tests {
         assert_yaml_snapshot!(examples);
     }
 
+    proptest! {
+        #[test]
+        fn carryover_tags_proptests(tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX) {
+            let content = format!("#{} {} {}\nhello world!", tag_name, parameter, multi_parameter);
+
+            parse(&content).unwrap();
+        }
+    }
+
     #[test]
     fn ranged_verbatim_tags() {
         let examples: Vec<_> = [
@@ -394,6 +410,21 @@ mod tests {
         .unwrap();
 
         assert_yaml_snapshot!(examples);
+    }
+
+    proptest! {
+        #[test]
+        // NOTE: `.*` may at some point generate an `@end` purely by chance. There is a basic
+        // check against this, but this should probably be done as a filter in proptest.
+        fn ranged_verbatim_tags_proptests(tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX, content in ".*") {
+            if content.contains("@end") {
+                return Ok(());
+            }
+
+            let content = format!("@{} {} {}\n{}\n@end", tag_name, parameter, multi_parameter, content);
+
+            parse(&content).unwrap();
+        }
     }
 
     #[test]
@@ -443,5 +474,52 @@ mod tests {
         .unwrap();
 
         assert_yaml_snapshot!(examples);
+    }
+
+    proptest! {
+        #[test]
+        // NOTE: `.*` may at some point generate an `@end` purely by chance. There is a basic
+        // check against this, but this should probably be done as a filter in proptest.
+        fn ranged_tags_proptests(tag_type in prop_oneof!["@", "|"], tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX, content in PARAGRAPH_REGEX) {
+            if content.contains(format!("{}end", tag_type).as_str()) {
+                return Ok(());
+            }
+
+            let content = format!("{tag_type}{tag_name} {parameter} {multi_parameter}\n{content}\n{tag_type}end");
+
+            parse(&content).unwrap();
+        }
+    }
+
+    #[test]
+    fn paragraphs() {
+        let examples: Vec<_> = [
+            "hello, world!",
+            "*hello, world!*",
+            "*hello,
+             world!*",
+            "two
+
+             paragraphs",
+            "paragraph
+             here
+
+             another paragraph
+             here.",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    proptest! {
+        #[test]
+        fn paragraphs_proptests(paragraph_content in PARAGRAPH_REGEX) {
+            parse(&paragraph_content).unwrap();
+        }
     }
 }
