@@ -1,0 +1,26 @@
+---
+source: src/lib.rs
+assertion_line: 252
+expression: examples
+---
+- - RangeableDetachedModifier:
+      modifier_type: Footnote
+      title:
+        - Text: Title
+      extensions: []
+      content:
+        - Paragraph:
+            - Token:
+                Text: Content
+- - RangeableDetachedModifier:
+      modifier_type: Footnote
+      title:
+        - Text: Title
+      extensions: []
+      content:
+        - Paragraph:
+            - Token:
+                Text: Long
+            - Token: Whitespace
+            - Token:
+                Text: content

@@ -2,7 +2,7 @@ use chumsky::prelude::*;
 use itertools::Itertools;
 use serde::Serialize;
 
-use crate::stage_2::{NorgBlock, ParagraphSegment, ParagraphSegmentToken};
+use crate::stage_2::{NorgBlock, ParagraphSegmentToken, ParagraphTokenList};
 
 #[derive(Debug, PartialEq, Serialize)]
 pub enum NestableDetachedModifier {
@@ -81,9 +81,145 @@ pub enum RangedTag {
     Standard,
 }
 
+fn paragraph_parser_opener_candidates() -> impl Parser<
+    ParagraphSegmentToken,
+    Vec<ParagraphSegment>,
+    Error = chumsky::error::Simple<ParagraphSegmentToken>,
+> {
+    let token = any().map(ParagraphSegment::Token);
+    let modifier = select! {
+        ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-')) => c,
+    };
+
+    let opening_modifier_candidate = just(ParagraphSegmentToken::Whitespace)
+        .then(modifier.repeated().at_least(1))
+        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .map(|((left, modifiers), right)| {
+            ParagraphSegment::AttachedModifierOpener((left, modifiers, right))
+        });
+
+    choice((opening_modifier_candidate, token))
+        .repeated()
+        .at_least(1)
+}
+
+fn paragraph_parser_closer_candidates(
+) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
+{
+    use ParagraphSegment::*;
+
+    let token = any();
+    let modifier = select! {
+        Token(ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-'))) => c,
+    };
+
+    let closing_modifier_candidate = just(Token(ParagraphSegmentToken::Whitespace))
+        .not()
+        .then(modifier.repeated().at_least(1))
+        .then(just(Token(ParagraphSegmentToken::Whitespace)))
+        .map(|((left, modifiers), right)| {
+            ParagraphSegment::AttachedModifierCloserCandidate((
+                Box::new(left),
+                modifiers,
+                Box::new(right),
+            ))
+        });
+
+    choice((closing_modifier_candidate, token))
+        .repeated()
+        .at_least(1)
+}
+
+fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
+    use ParagraphSegment::*;
+
+    input
+        .into_iter()
+        .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
+            match segment {
+                t @ Token(_) => acc.push(t),
+                AttachedModifierOpener((left, modifiers, right)) => {
+                    acc.push(Token(left));
+                    acc.extend(modifiers.into_iter().map(|modifier_type| {
+                        AttachedModifierCandidate {
+                            modifier_type,
+                            content: Vec::default(),
+                            closer: None,
+                        }
+                    }));
+                    acc.push(Token(right));
+                }
+                AttachedModifierCloserCandidate((left, modifiers, right)) => {
+                    acc.push(*left);
+                    acc.extend(modifiers.into_iter().map(AttachedModifierCloser));
+                    acc.push(*right);
+                }
+                AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
+                others => acc.push(others),
+            };
+
+            acc
+        })
+}
+
+fn paragraph_rollup_candidates(
+) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
+{
+    let candidate = select! { c @ ParagraphSegment::AttachedModifierCloser(_) => c, };
+
+    let attached_modifier = recursive(|attached_modifier| {
+        select! {
+            ParagraphSegment::AttachedModifierCandidate { modifier_type, .. } => modifier_type,
+        }
+        .then(attached_modifier.or(candidate.not()).repeated().at_least(1))
+        .then_ignore(candidate)
+        .map(
+            |(modifier_type, content)| ParagraphSegment::AttachedModifier {
+                modifier_type,
+                content,
+            },
+        )
+    });
+
+    choice((attached_modifier, any())).repeated().at_least(1)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Hash, Eq)]
+pub enum ParagraphSegment {
+    Token(ParagraphSegmentToken),
+    AttachedModifierOpener((ParagraphSegmentToken, Vec<char>, ParagraphSegmentToken)),
+    AttachedModifierCloserCandidate((Box<ParagraphSegment>, Vec<char>, Box<ParagraphSegment>)),
+    AttachedModifierCloser(char),
+    AttachedModifierCandidate {
+        modifier_type: char,
+        content: Vec<Self>,
+        closer: Option<Box<Self>>,
+    },
+    AttachedModifier {
+        modifier_type: char,
+        content: Vec<Self>,
+    }, // Links(...),
+}
+
+fn parse_paragraph(
+    input: Vec<ParagraphSegmentToken>,
+) -> Result<Vec<ParagraphSegment>, Vec<chumsky::error::Simple<ParagraphSegmentToken>>> {
+    Ok(unravel_candidates(
+        paragraph_rollup_candidates()
+            .parse(unravel_candidates(
+                paragraph_parser_closer_candidates()
+                    .parse(unravel_candidates(
+                        paragraph_parser_opener_candidates().parse(input)?,
+                    ))
+                    .unwrap(),
+            ))
+            .unwrap(),
+    ))
+}
+
 #[derive(Debug, PartialEq, Serialize)]
 pub enum NorgASTFlat {
-    Paragraph(ParagraphSegment),
+    Paragraph(Vec<ParagraphSegment>),
     NestableDetachedModifier {
         modifier_type: NestableDetachedModifier,
         level: u16,
@@ -92,13 +228,13 @@ pub enum NorgASTFlat {
     },
     RangeableDetachedModifier {
         modifier_type: RangeableDetachedModifier,
-        title: ParagraphSegment,
+        title: ParagraphTokenList,
         extensions: Vec<DetachedModifierExtension>,
         content: Vec<Self>,
     },
     Heading {
         level: u16,
-        title: ParagraphSegment,
+        title: ParagraphTokenList,
         extensions: Vec<DetachedModifierExtension>,
     },
     CarryoverTag {
@@ -205,7 +341,7 @@ pub fn stage_3(
                 .chain(paragraph_segment_end.or_not()),
             paragraph_segment_end,
         ))
-            .map(NorgASTFlat::Paragraph);
+            .map(|tokens| NorgASTFlat::Paragraph(parse_paragraph(tokens).unwrap()));
 
         let nestable_detached_modifier = select! {
             NorgBlock::NestableDetachedModifier { modifier_type: '-', level, extension_section } => (NestableDetachedModifier::UnorderedList, level, extension_section),
@@ -257,7 +393,7 @@ pub fn stage_3(
             extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
         }));
 
-        let stringify_tokens_and_split = move |tokens: ParagraphSegment| -> Vec<String> {
+        let stringify_tokens_and_split = move |tokens: ParagraphTokenList| -> Vec<String> {
             tokens.into_iter().map_into::<String>().collect::<String>().split('.').map_into().collect()
         };
 

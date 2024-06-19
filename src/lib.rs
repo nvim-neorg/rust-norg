@@ -527,4 +527,16 @@ mod tests {
             parse(&paragraph_content).unwrap();
         }
     }
+
+    #[test]
+    fn modifiers() {
+        let examples: Vec<_> = ["this *is* a test", ""]
+            .into_iter()
+            .map(|example| example.to_string() + "\n")
+            .map(|str| parse(&str))
+            .try_collect()
+            .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
 }
