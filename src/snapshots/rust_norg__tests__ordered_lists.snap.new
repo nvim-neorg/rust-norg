@@ -1,0 +1,121 @@
+---
+source: src/lib.rs
+assertion_line: 142
+expression: examples
+---
+- - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+- - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 4
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+- - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+  - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+  - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+  - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 2
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+  - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+  - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 3
+      extensions: []
+      content:
+        Paragraph:
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
+- - Paragraph:
+      - Token:
+          Special: "~"
+      - Token:
+          Special: "~"
+      - Token:
+          Special: "~"
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: list
+- - Paragraph:
+      - Token:
+          Special: "~"
+      - Token:
+          Special: "~"
+      - Token:
+          Special: ">"
+      - Token: Whitespace
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: list

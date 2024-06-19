@@ -1,0 +1,131 @@
+---
+source: src/lib.rs
+assertion_line: 376
+expression: examples
+---
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag-name_with-complexchars
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag-name_
+      parameters:
+        - parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+        - "&^@!"
+        - third
+        - parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Attribute
+      name:
+        - tag
+        - name
+        - image
+      parameters:
+        - "https://github.com/super-special/repo.git?text=hello&other_text=bye"
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag-name_with-complexchars
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag-name_
+      parameters:
+        - parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag-name_
+      parameters:
+        - one large parameter
+        - "&^@!"
+        - third
+        - parameter
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - tag
+        - name
+        - image
+      parameters:
+        - "https://github.com/super-special/repo.git?text=hello&other_text=bye"
+      next_object:
+        Paragraph:
+          - Token:
+              Text: paragraph

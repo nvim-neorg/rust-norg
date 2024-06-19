@@ -36,9 +36,9 @@ impl From<ParagraphSegmentToken> for String {
     }
 }
 
-pub type ParagraphSegment = Vec<ParagraphSegmentToken>;
+pub type ParagraphTokenList = Vec<ParagraphSegmentToken>;
 
-fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphSegment {
+fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
     tokens
         .into_iter()
         .peekable()
@@ -66,54 +66,54 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphSegment {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum NorgBlock {
     /// A segment of a paragraph consisting of Norg tokens.
-    ParagraphSegment(ParagraphSegment),
+    ParagraphSegment(ParagraphTokenList),
     /// End of a paragraph segment.
-    ParagraphSegmentEnd(ParagraphSegment),
+    ParagraphSegmentEnd(ParagraphTokenList),
     /// A heading with a specified level, title, and optional extension section.
     Heading {
         level: u16,
-        title: ParagraphSegment,
-        extension_section: ParagraphSegment,
+        title: ParagraphTokenList,
+        extension_section: ParagraphTokenList,
     },
     /// A nestable detached modifier with a type, level, and optional extension section.
     NestableDetachedModifier {
         modifier_type: char,
         level: u16,
-        extension_section: ParagraphSegment,
+        extension_section: ParagraphTokenList,
     },
     /// A rangeable detached modifier with an indication if it is ranged, type, title, and optional extension section.
     RangeableDetachedModifier {
         ranged: bool,
         modifier_type: char,
-        title: ParagraphSegment,
-        extension_section: ParagraphSegment,
+        title: ParagraphTokenList,
+        extension_section: ParagraphTokenList,
     },
     /// Closing tag for a rangeable detached modifier.
     RangeableDetachedModifierClose(char),
     /// A ranged tag with a type, name, and optional parameters.
     RangedTag {
         tag_type: char,
-        name: ParagraphSegment,
-        parameters: Option<Vec<ParagraphSegment>>,
+        name: ParagraphTokenList,
+        parameters: Option<Vec<ParagraphTokenList>>,
     },
     /// End of a ranged tag.
     RangedTagEnd(char),
     /// A verbatim ranged tag with a name, optional parameters, and content.
     VerbatimRangedTag {
-        name: ParagraphSegment,
-        parameters: Option<Vec<ParagraphSegment>>,
+        name: ParagraphTokenList,
+        parameters: Option<Vec<ParagraphTokenList>>,
         content: Vec<NorgToken>,
     },
     /// An infirm tag with a name and optional parameters.
     InfirmTag {
-        name: ParagraphSegment,
-        parameters: Option<Vec<ParagraphSegment>>,
+        name: ParagraphTokenList,
+        parameters: Option<Vec<ParagraphTokenList>>,
     },
     /// A carryover tag with a type, name, and optional parameters.
     CarryoverTag {
         tag_type: char,
-        name: ParagraphSegment,
-        parameters: Option<Vec<ParagraphSegment>>,
+        name: ParagraphTokenList,
+        parameters: Option<Vec<ParagraphTokenList>>,
     },
 }
 
