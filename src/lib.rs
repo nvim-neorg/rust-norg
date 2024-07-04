@@ -1,10 +1,15 @@
 use chumsky::Parser as _;
 use error::NorgParseError;
-use stage_3::NorgASTFlat;
 
 use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
 use crate::stage_3::stage_3;
+
+pub use crate::stage_2::ParagraphSegmentToken;
+pub use crate::stage_3::{
+    CarryoverTag, DetachedModifierExtension, NestableDetachedModifier, NorgASTFlat,
+    RangeableDetachedModifier, RangedTag, TodoStatus,
+};
 
 mod error;
 mod stage_1;
