@@ -1,9 +1,11 @@
 use chumsky::Parser as _;
 use error::NorgParseError;
+use stage_4::NorgAST;
 
 use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
 use crate::stage_3::stage_3;
+use crate::stage_4::stage_4;
 
 pub use crate::stage_2::ParagraphSegmentToken;
 pub use crate::stage_3::{
@@ -15,6 +17,7 @@ mod error;
 mod stage_1;
 mod stage_2;
 mod stage_3;
+mod stage_4;
 
 /// Parses the given input string through multiple stages to produce a flattened abstract syntax tree (AST).
 ///
@@ -28,6 +31,10 @@ mod stage_3;
 /// * `Err(NorgParseError)` if any stage of parsing fails.
 pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
     Ok(stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?)
+}
+
+pub fn parse_tree(input: &str) -> Result<Vec<NorgAST>, NorgParseError> {
+    Ok(stage_4(stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?))
 }
 
 #[cfg(test)]
