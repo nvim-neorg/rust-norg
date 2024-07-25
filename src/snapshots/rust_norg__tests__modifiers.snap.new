@@ -1,32 +1,83 @@
 ---
 source: src/lib.rs
-assertion_line: 535
+assertion_line: 541
 expression: examples
 ---
 - - Paragraph:
       - Token:
-          Text: hello
+          Text: this
       - Token: Whitespace
       - AttachedModifier:
           modifier_type: "*"
           content:
             - Token:
+                Text: is
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: test
+- - Paragraph:
+      - Token:
+          Text: hello
+      - Token:
+          Special: ","
+      - Token: Whitespace
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: world
+      - Token:
+          Special: "!"
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
                 Text: hello
-            - Token: Whitespace
-            - AttachedModifier:
-                modifier_type: /
-                content:
-                  - Token:
-                      Text: world
+            - Token:
+                Special: ","
             - Token: Whitespace
             - Token:
-                Text: man
+                Text: world
+            - Token:
+                Special: "!"
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: hello
+      - Token:
+          Special: ","
       - Token: Whitespace
       - Token:
-          Text: how
+          Text: world
+      - Token:
+          Special: "!"
+- - Paragraph:
+      - AttachedModifierCandidate:
+          modifier_type: "*"
+          content: []
+          closer: ~
+      - AttachedModifierCandidate:
+          modifier_type: /
+          content: []
+          closer: ~
+      - Token:
+          Text: hello
+      - Token:
+          Special: /
+      - AttachedModifierCandidate:
+          modifier_type: "*"
+          content: []
+          closer: ~
+      - Token:
+          Special: ","
       - Token: Whitespace
       - Token:
-          Text: are
-      - Token: Whitespace
+          Text: world
       - Token:
-          Text: you?
+          Special: "!"

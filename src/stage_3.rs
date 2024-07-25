@@ -91,16 +91,31 @@ fn paragraph_parser_opener_candidates() -> impl Parser<
         ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-')) => c,
     };
 
-    let opening_modifier_candidate = just(ParagraphSegmentToken::Whitespace)
+    let whitespace_or_special = select! {
+        w @ ParagraphSegmentToken::Whitespace => w,
+        s @ ParagraphSegmentToken::Special(_) => s,
+    };
+
+    let opening_modifier_candidate = whitespace_or_special
         .then(modifier.repeated().at_least(1))
         .then(just(ParagraphSegmentToken::Whitespace).not())
         .map(|((left, modifiers), right)| {
-            ParagraphSegment::AttachedModifierOpener((left, modifiers, right))
+            ParagraphSegment::AttachedModifierOpener((Some(left), modifiers, right))
         });
 
-    choice((opening_modifier_candidate, token))
+    let left_empty_opening_modifier = modifier
         .repeated()
         .at_least(1)
+        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .map(|(modifiers, right)| {
+            ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
+        });
+
+    left_empty_opening_modifier.or_not().chain(
+        choice((opening_modifier_candidate, token))
+            .repeated()
+            .at_least(1),
+    )
 }
 
 fn paragraph_parser_closer_candidates(
@@ -113,21 +128,40 @@ fn paragraph_parser_closer_candidates(
         Token(ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-'))) => c,
     };
 
+    let whitespace_or_special = select! {
+        w @ Token(ParagraphSegmentToken::Whitespace) => w,
+        s @ Token(ParagraphSegmentToken::Special(_)) => s,
+    };
+
     let closing_modifier_candidate = just(Token(ParagraphSegmentToken::Whitespace))
         .not()
         .then(modifier.repeated().at_least(1))
-        .then(just(Token(ParagraphSegmentToken::Whitespace)))
+        .then(whitespace_or_special)
         .map(|((left, modifiers), right)| {
             ParagraphSegment::AttachedModifierCloserCandidate((
                 Box::new(left),
                 modifiers,
-                Box::new(right),
+                Some(Box::new(right)),
             ))
         });
 
-    choice((closing_modifier_candidate, token))
-        .repeated()
-        .at_least(1)
+    // TODO(vhyrro): This is not optimal, as it causes a second parse of a potentially long string
+    // of nodes. Ideally, the `end()` check should be done directly in a single parse.
+    let closing_modifier_candidate_with_eof = just(Token(ParagraphSegmentToken::Whitespace))
+        .not()
+        .then(modifier.repeated().at_least(1))
+        .then_ignore(end())
+        .map(|(left, modifiers)| {
+            ParagraphSegment::AttachedModifierCloserCandidate((Box::new(left), modifiers, None))
+        });
+
+    choice((
+        closing_modifier_candidate,
+        closing_modifier_candidate_with_eof,
+        token,
+    ))
+    .repeated()
+    .at_least(1)
 }
 
 fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
@@ -139,7 +173,9 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
             match segment {
                 t @ Token(_) => acc.push(t),
                 AttachedModifierOpener((left, modifiers, right)) => {
-                    acc.push(Token(left));
+                    if let Some(left) = left {
+                        acc.push(Token(left));
+                    }
                     acc.extend(modifiers.into_iter().map(|modifier_type| {
                         AttachedModifierCandidate {
                             modifier_type,
@@ -152,7 +188,9 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                 AttachedModifierCloserCandidate((left, modifiers, right)) => {
                     acc.push(*left);
                     acc.extend(modifiers.into_iter().map(AttachedModifierCloser));
-                    acc.push(*right);
+                    if let Some(right) = right {
+                        acc.push(*right);
+                    }
                 }
                 AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
                 others => acc.push(others),
@@ -187,8 +225,20 @@ fn paragraph_rollup_candidates(
 #[derive(Debug, Clone, PartialEq, Serialize, Hash, Eq)]
 pub enum ParagraphSegment {
     Token(ParagraphSegmentToken),
-    AttachedModifierOpener((ParagraphSegmentToken, Vec<char>, ParagraphSegmentToken)),
-    AttachedModifierCloserCandidate((Box<ParagraphSegment>, Vec<char>, Box<ParagraphSegment>)),
+    AttachedModifierOpener(
+        (
+            Option<ParagraphSegmentToken>,
+            Vec<char>,
+            ParagraphSegmentToken,
+        ),
+    ),
+    AttachedModifierCloserCandidate(
+        (
+            Box<ParagraphSegment>,
+            Vec<char>,
+            Option<Box<ParagraphSegment>>,
+        ),
+    ),
     AttachedModifierCloser(char),
     AttachedModifierCandidate {
         modifier_type: char,
