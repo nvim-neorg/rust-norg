@@ -118,6 +118,17 @@ fn paragraph_parser_opener_candidates() -> impl Parser<
     )
 }
 
+fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
+    use ParagraphSegment::*;
+
+    input.into_iter().coalesce(|prev, next| {
+        match (prev.clone(), next.clone()) {
+            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => Err((prev, AttachedModifierOpenerFail(data))),
+            _ => Err((prev, next)),
+        }
+    }).collect()
+}
+
 fn paragraph_parser_closer_candidates(
 ) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
 {
@@ -193,6 +204,13 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                     }
                 }
                 AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
+                AttachedModifierOpenerFail((left, modifiers, right)) => {
+                    if let Some(left) = left {
+                        acc.push(Token(left));
+                    }
+                    acc.extend(modifiers.into_iter().map(|c| Token(ParagraphSegmentToken::Special(c))));
+                    acc.push(Token(right));
+                },
                 others => acc.push(others),
             };
 
@@ -232,6 +250,11 @@ pub enum ParagraphSegment {
             ParagraphSegmentToken,
         ),
     ),
+    AttachedModifierOpenerFail((
+            Option<ParagraphSegmentToken>,
+            Vec<char>,
+            ParagraphSegmentToken,
+    )),
     AttachedModifierCloserCandidate(
         (
             Box<ParagraphSegment>,
@@ -259,7 +282,7 @@ fn parse_paragraph(
             .parse(unravel_candidates(
                 paragraph_parser_closer_candidates()
                     .parse(unravel_candidates(
-                        paragraph_parser_opener_candidates().parse(input)?,
+                        dedup_opener_candidates(paragraph_parser_opener_candidates().parse(input)?),
                     ))
                     .unwrap(),
             ))
