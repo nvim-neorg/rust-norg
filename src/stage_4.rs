@@ -12,7 +12,8 @@ pub enum NorgAST {
         modifier_type: NestableDetachedModifier,
         level: u16,
         extensions: Vec<DetachedModifierExtension>,
-        content: Box<NorgASTFlat>,
+        text: Box<NorgASTFlat>,
+        content: Vec<Self>,
     },
     RangeableDetachedModifier {
         modifier_type: RangeableDetachedModifier,
@@ -52,7 +53,7 @@ fn convert(flat: NorgASTFlat) -> NorgAST {
     match flat {
         NorgASTFlat::Paragraph(tokens) => NorgAST::Paragraph(tokens),
         NorgASTFlat::NestableDetachedModifier { modifier_type, level, extensions, content } =>
-        NorgAST::NestableDetachedModifier { modifier_type, level, extensions, content },
+        NorgAST::NestableDetachedModifier { modifier_type, level, extensions, text: content, content: vec![] },
         NorgASTFlat::RangeableDetachedModifier { modifier_type, title, extensions, content } =>
         NorgAST::RangeableDetachedModifier { modifier_type, title, extensions, content },
         NorgASTFlat::Heading { level, title, extensions } =>
@@ -91,6 +92,31 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
             }
 
             ast.push(NorgAST::Heading { level: *start_level, title: title.to_vec(), extensions: extensions.to_vec(), content })
+        } else if let NorgASTFlat::NestableDetachedModifier { level: start_level, modifier_type, extensions, content: text } = item {
+            let mut content = vec![];
+            for j in (i+1)..flat.len() {
+                if let NorgASTFlat::NestableDetachedModifier { level, .. } = &flat[j] {
+                    if level <= start_level {
+                        // stop.
+                        content = stage_4(flat[(i + 1)..j].to_vec());
+                        i = j - 1;
+                        break
+                    }
+
+                } else {
+                    // stop immediately if we see something that's not a NestableDetachedModifier
+                    // of lesser level
+                    break;
+                }
+            }
+
+            ast.push(NorgAST::NestableDetachedModifier {
+                modifier_type: modifier_type.clone(),
+                level: *start_level,
+                extensions: extensions.to_vec(),
+                text: text.clone(),
+                content,
+            });
         } else {
             ast.push(convert(item.clone()));
         }
