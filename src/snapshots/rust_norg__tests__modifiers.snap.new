@@ -58,22 +58,14 @@ expression: examples
       - Token:
           Special: "!"
 - - Paragraph:
-      - AttachedModifierCandidate:
+      - AttachedModifier:
           modifier_type: "*"
-          content: []
-          closer: ~
-      - AttachedModifierCandidate:
-          modifier_type: /
-          content: []
-          closer: ~
-      - Token:
-          Text: hello
-      - Token:
-          Special: /
-      - AttachedModifierCandidate:
-          modifier_type: "*"
-          content: []
-          closer: ~
+          content:
+            - AttachedModifier:
+                modifier_type: /
+                content:
+                  - Token:
+                      Text: hello
       - Token:
           Special: ","
       - Token: Whitespace
