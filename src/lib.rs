@@ -530,6 +530,7 @@ mod tests {
 
     #[test]
     fn modifiers() {
+        // TODO(vhyrro): Add anti-tests for unclosed markup (which should error).
         let examples: Vec<_> = [
             "this *is* a test",
             "hello, *world*!",
