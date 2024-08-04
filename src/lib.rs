@@ -536,6 +536,7 @@ mod tests {
             "*hello, world!*",
             "*hello*, world!",
             "*/hello/*, world!",
+            "*hi!* how are you?",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

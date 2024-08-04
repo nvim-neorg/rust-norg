@@ -3,36 +3,58 @@ source: src/lib.rs
 expression: examples
 ---
 - - Paragraph:
-      - Text: hello
-      - Special: ","
-      - Whitespace
-      - Text: world
-      - Special: "!"
+      - Token:
+          Text: hello
+      - Token:
+          Special: ","
+      - Token: Whitespace
+      - Token:
+          Text: world
+      - Token:
+          Special: "!"
 - - Paragraph:
-      - Special: "*"
-      - Text: hello
-      - Special: ","
-      - Whitespace
-      - Text: world
-      - Special: "!"
-      - Special: "*"
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: hello
+            - Token:
+                Special: ","
+            - Token: Whitespace
+            - Token:
+                Text: world
+            - Token:
+                Special: "!"
 - - Paragraph:
-      - Special: "*"
-      - Text: hello
-      - Special: ","
-      - Text: world
-      - Special: "!"
-      - Special: "*"
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: hello
+            - Token:
+                Special: ","
+            - Token:
+                Text: world
+            - Token:
+                Special: "!"
 - - Paragraph:
-      - Text: two
+      - Token:
+          Text: two
   - Paragraph:
-      - Text: paragraphs
+      - Token:
+          Text: paragraphs
 - - Paragraph:
-      - Text: paragraph
-      - Text: here
+      - Token:
+          Text: paragraph
+      - Token:
+          Text: here
   - Paragraph:
-      - Text: another
-      - Whitespace
-      - Text: paragraph
-      - Text: here
-      - Special: "."
+      - Token:
+          Text: another
+      - Token: Whitespace
+      - Token:
+          Text: paragraph
+      - Token:
+          Text: here
+      - Token:
+          Special: "."

@@ -1,6 +1,5 @@
 ---
 source: src/lib.rs
-assertion_line: 541
 expression: examples
 ---
 - - Paragraph:
@@ -73,3 +72,20 @@ expression: examples
           Text: world
       - Token:
           Special: "!"
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: hi
+            - Token:
+                Special: "!"
+      - Token: Whitespace
+      - Token:
+          Text: how
+      - Token: Whitespace
+      - Token:
+          Text: are
+      - Token: Whitespace
+      - Token:
+          Text: you?

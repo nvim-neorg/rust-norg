@@ -121,12 +121,15 @@ fn paragraph_parser_opener_candidates() -> impl Parser<
 fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
-    input.into_iter().coalesce(|prev, next| {
-        match (prev.clone(), next.clone()) {
-            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => Err((prev, AttachedModifierOpenerFail(data))),
+    input
+        .into_iter()
+        .coalesce(|prev, next| match (prev.clone(), next.clone()) {
+            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => {
+                Err((prev, AttachedModifierOpenerFail(data)))
+            }
             _ => Err((prev, next)),
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 fn paragraph_parser_closer_candidates(
@@ -208,9 +211,13 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                     if let Some(left) = left {
                         acc.push(Token(left));
                     }
-                    acc.extend(modifiers.into_iter().map(|c| Token(ParagraphSegmentToken::Special(c))));
+                    acc.extend(
+                        modifiers
+                            .into_iter()
+                            .map(|c| Token(ParagraphSegmentToken::Special(c))),
+                    );
                     acc.push(Token(right));
-                },
+                }
                 others => acc.push(others),
             };
 
@@ -240,6 +247,32 @@ fn paragraph_rollup_candidates(
     choice((attached_modifier, any())).repeated().at_least(1)
 }
 
+fn eliminate_invalid_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
+    input
+        .into_iter()
+        .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
+            match segment {
+                ParagraphSegment::AttachedModifierCandidate {
+                    modifier_type,
+                    content,
+                    closer,
+                } => {
+                    acc.push(ParagraphSegment::Token(ParagraphSegmentToken::Special(
+                        modifier_type,
+                    )));
+                    acc.extend(content);
+
+                    if let Some(closer) = closer {
+                        acc.push(*closer);
+                    }
+                }
+                _ => acc.push(segment),
+            };
+
+            acc
+        })
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Hash, Eq)]
 pub enum ParagraphSegment {
     Token(ParagraphSegmentToken),
@@ -250,11 +283,13 @@ pub enum ParagraphSegment {
             ParagraphSegmentToken,
         ),
     ),
-    AttachedModifierOpenerFail((
+    AttachedModifierOpenerFail(
+        (
             Option<ParagraphSegmentToken>,
             Vec<char>,
             ParagraphSegmentToken,
-    )),
+        ),
+    ),
     AttachedModifierCloserCandidate(
         (
             Box<ParagraphSegment>,
@@ -277,17 +312,17 @@ pub enum ParagraphSegment {
 fn parse_paragraph(
     input: Vec<ParagraphSegmentToken>,
 ) -> Result<Vec<ParagraphSegment>, Vec<chumsky::error::Simple<ParagraphSegmentToken>>> {
-    Ok(unravel_candidates(
+    Ok(eliminate_invalid_candidates(unravel_candidates(
         paragraph_rollup_candidates()
             .parse(unravel_candidates(
                 paragraph_parser_closer_candidates()
-                    .parse(unravel_candidates(
-                        dedup_opener_candidates(paragraph_parser_opener_candidates().parse(input)?),
-                    ))
+                    .parse(unravel_candidates(dedup_opener_candidates(
+                        paragraph_parser_opener_candidates().parse(input)?,
+                    )))
                     .unwrap(),
             ))
             .unwrap(),
-    ))
+    )))
 }
 
 #[derive(Debug, PartialEq, Serialize)]

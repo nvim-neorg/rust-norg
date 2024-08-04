@@ -8,10 +8,13 @@ expression: examples
       parameters: []
       content:
         - Paragraph:
-            - Text: Hello
-            - Whitespace
-            - Text: world
-            - Special: "!"
+            - Token:
+                Text: Hello
+            - Token: Whitespace
+            - Token:
+                Text: world
+            - Token:
+                Special: "!"
 - - RangedTag:
       name:
         - example
@@ -28,9 +31,11 @@ expression: examples
             parameters: []
             next_object:
               Paragraph:
-                - Text: text
-                - Whitespace
-                - Text: within
+                - Token:
+                    Text: text
+                - Token: Whitespace
+                - Token:
+                    Text: within
 - - RangedTag:
       name:
         - some-complex_tag_
@@ -40,15 +45,20 @@ expression: examples
         - third-parameter
       content:
         - Paragraph:
-            - Text: this
-            - Whitespace
-            - Text: is
-            - Whitespace
-            - Text: some
-            - Whitespace
-            - Text: text
-            - Whitespace
-            - Text: within
+            - Token:
+                Text: this
+            - Token: Whitespace
+            - Token:
+                Text: is
+            - Token: Whitespace
+            - Token:
+                Text: some
+            - Token: Whitespace
+            - Token:
+                Text: text
+            - Token: Whitespace
+            - Token:
+                Text: within
 - - RangedTag:
       name:
         - example
@@ -86,10 +96,13 @@ expression: examples
       parameters: []
       content:
         - Paragraph:
-            - Text: Hello
-            - Whitespace
-            - Text: world
-            - Special: "!"
+            - Token:
+                Text: Hello
+            - Token: Whitespace
+            - Token:
+                Text: world
+            - Token:
+                Special: "!"
 - - RangedTag:
       name:
         - example
@@ -106,9 +119,11 @@ expression: examples
             parameters: []
             next_object:
               Paragraph:
-                - Text: text
-                - Whitespace
-                - Text: within
+                - Token:
+                    Text: text
+                - Token: Whitespace
+                - Token:
+                    Text: within
 - - RangedTag:
       name:
         - some-complex_tag_
@@ -118,15 +133,20 @@ expression: examples
         - third-parameter
       content:
         - Paragraph:
-            - Text: this
-            - Whitespace
-            - Text: is
-            - Whitespace
-            - Text: some
-            - Whitespace
-            - Text: text
-            - Whitespace
-            - Text: within
+            - Token:
+                Text: this
+            - Token: Whitespace
+            - Token:
+                Text: is
+            - Token: Whitespace
+            - Token:
+                Text: some
+            - Token: Whitespace
+            - Token:
+                Text: text
+            - Token: Whitespace
+            - Token:
+                Text: within
 - - RangedTag:
       name:
         - example
