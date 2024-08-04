@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - CarryoverTag:
@@ -9,7 +9,8 @@ expression: examples
       parameters: []
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Attribute
       name:
@@ -17,7 +18,8 @@ expression: examples
       parameters: []
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Attribute
       name:
@@ -26,7 +28,8 @@ expression: examples
         - parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Attribute
       name:
@@ -35,7 +38,8 @@ expression: examples
         - one large parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Attribute
       name:
@@ -47,7 +51,8 @@ expression: examples
         - parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Attribute
       name:
@@ -58,7 +63,8 @@ expression: examples
         - "https://github.com/super-special/repo.git?text=hello&other_text=bye"
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -66,7 +72,8 @@ expression: examples
       parameters: []
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -74,7 +81,8 @@ expression: examples
       parameters: []
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -83,7 +91,8 @@ expression: examples
         - parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -92,7 +101,8 @@ expression: examples
         - one large parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -104,7 +114,8 @@ expression: examples
         - parameter
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph
 - - CarryoverTag:
       tag_type: Macro
       name:
@@ -115,4 +126,5 @@ expression: examples
         - "https://github.com/super-special/repo.git?text=hello&other_text=bye"
       next_object:
         Paragraph:
-          - Text: paragraph
+          - Token:
+              Text: paragraph

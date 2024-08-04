@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - NestableDetachedModifier:
@@ -8,86 +8,113 @@ expression: examples
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
 - - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 4
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
 - - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 1
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
   - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 1
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
   - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 2
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
   - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 2
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
   - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 1
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
   - NestableDetachedModifier:
       modifier_type: UnorderedList
       level: 3
       extensions: []
       content:
         Paragraph:
-          - Text: Test
-          - Whitespace
-          - Text: list
+          - Token:
+              Text: Test
+          - Token: Whitespace
+          - Token:
+              Text: list
 - - Paragraph:
-      - Special: "-"
-      - Special: "-"
-      - Special: "-"
-      - Text: not
-      - Whitespace
-      - Text: list
+      - Token:
+          Special: "-"
+      - Token:
+          Special: "-"
+      - Token:
+          Special: "-"
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: list
 - - Paragraph:
-      - Special: "-"
-      - Special: "-"
-      - Special: ">"
-      - Whitespace
-      - Text: not
-      - Whitespace
-      - Text: a
-      - Whitespace
-      - Text: list
+      - Token:
+          Special: "-"
+      - Token:
+          Special: "-"
+      - Token:
+          Special: ">"
+      - Token: Whitespace
+      - Token:
+          Text: not
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: list

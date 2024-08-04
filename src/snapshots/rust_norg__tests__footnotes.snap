@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - RangeableDetachedModifier:
@@ -9,7 +9,8 @@ expression: examples
       extensions: []
       content:
         - Paragraph:
-            - Text: Content
+            - Token:
+                Text: Content
 - - RangeableDetachedModifier:
       modifier_type: Footnote
       title:
@@ -17,6 +18,8 @@ expression: examples
       extensions: []
       content:
         - Paragraph:
-            - Text: Long
-            - Whitespace
-            - Text: content
+            - Token:
+                Text: Long
+            - Token: Whitespace
+            - Token:
+                Text: content
