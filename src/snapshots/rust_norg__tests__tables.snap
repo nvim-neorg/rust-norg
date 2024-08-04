@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - RangeableDetachedModifier:
@@ -9,9 +9,11 @@ expression: examples
       extensions: []
       content:
         - Paragraph:
-            - Text: Cell
-            - Whitespace
-            - Text: content
+            - Token:
+                Text: Cell
+            - Token: Whitespace
+            - Token:
+                Text: content
 - - RangeableDetachedModifier:
       modifier_type: Table
       title:
@@ -19,9 +21,13 @@ expression: examples
       extensions: []
       content:
         - Paragraph:
-            - Text: Long
-            - Whitespace
-            - Text: cell
-            - Whitespace
-            - Text: content
-            - Special: "."
+            - Token:
+                Text: Long
+            - Token: Whitespace
+            - Token:
+                Text: cell
+            - Token: Whitespace
+            - Token:
+                Text: content
+            - Token:
+                Special: "."

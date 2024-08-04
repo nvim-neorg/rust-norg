@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - Heading:
@@ -18,8 +18,10 @@ expression: examples
         - Text: Heading
       extensions: []
   - Paragraph:
-      - Text: content
-      - Special: "."
+      - Token:
+          Text: content
+      - Token:
+          Special: "."
 - - Heading:
       level: 7
       title:
@@ -64,24 +66,32 @@ expression: examples
         - Text: Heading
       extensions: []
   - Paragraph:
-      - Text: sneaky
-      - Whitespace
-      - Text: content
-      - Special: "."
+      - Token:
+          Text: sneaky
+      - Token: Whitespace
+      - Token:
+          Text: content
+      - Token:
+          Special: "."
   - Heading:
       level: 2
       title:
         - Text: Subheading
       extensions: []
   - Paragraph:
-      - Text: more
-      - Whitespace
-      - Text: sneaky
-      - Whitespace
-      - Text: content
-      - Whitespace
-      - Text: inside
-      - Special: "."
+      - Token:
+          Text: more
+      - Token: Whitespace
+      - Token:
+          Text: sneaky
+      - Token: Whitespace
+      - Token:
+          Text: content
+      - Token: Whitespace
+      - Token:
+          Text: inside
+      - Token:
+          Special: "."
   - Heading:
       level: 1
       title:
