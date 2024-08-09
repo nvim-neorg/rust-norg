@@ -19,6 +19,13 @@ pub enum RangeableDetachedModifier {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+pub enum DelimitingModifier {
+    Weak,
+    Strong,
+    HorizontalRule,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
 pub enum TodoStatus {
     /// ` `
     Undone,
@@ -121,6 +128,7 @@ pub enum NorgASTFlat {
         name: Vec<String>,
         parameters: Vec<String>,
     },
+    DelimitingModifier(DelimitingModifier),
 }
 
 fn detached_modifier_extensions() -> impl Parser<
@@ -299,8 +307,15 @@ pub fn stage_3(
             NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect() },
         };
 
+        let delimiting_mod = select! {
+            NorgBlock::DelimitingModifier('-') => NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak),
+            NorgBlock::DelimitingModifier('=') => NorgASTFlat::DelimitingModifier(DelimitingModifier::Strong),
+            NorgBlock::DelimitingModifier('_') => NorgASTFlat::DelimitingModifier(DelimitingModifier::HorizontalRule),
+        };
+
         choice((
             carryover_tag,
+            delimiting_mod,
             verbatim_ranged_tag,
             ranged_tag,
             infirm_tag,
