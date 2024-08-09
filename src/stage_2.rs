@@ -117,6 +117,8 @@ pub enum NorgBlock {
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
     },
+    /// A delimiting modifier, defined by a single char `-` (weak), `=` (string), or `_` (horizontal rule)
+    DelimitingModifier(char),
 }
 
 /// Defines the parser for stage 2 of the Norg parsing process, which converts tokens into blocks.
@@ -130,6 +132,11 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     use NorgToken::*;
 
     let whitespace = select! { Whitespace(_) => () };
+
+    // let newlines = select! {
+    //     s @ SingleNewline => s,
+    //     n @ Newlines(..) => n,
+    // };
 
     let newlines_or_eof = select! {
         s @ SingleNewline => s,
@@ -379,8 +386,19 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         NorgToken::End(c) => NorgBlock::RangedTagEnd(c),
     };
 
+    // NOTE: this does not parse delimiting_mods that are the first element in the document, b/c
+    // there is no way to check for that.
+    let delimiting_mod = select! {
+        NorgToken::Special(c @ ('-' | '=' | '_')) => c,
+    }
+    .repeated()
+    .at_least(2)
+    .then_ignore(newlines_or_eof)
+    .map(|chars| NorgBlock::DelimitingModifier(chars[0]));
+
     choice((
         heading,
+        delimiting_mod,
         nestable_detached_modifier,
         rangeable_mod('$'),
         rangeable_mod_closer('$'),

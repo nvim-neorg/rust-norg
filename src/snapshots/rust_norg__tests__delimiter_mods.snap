@@ -1,0 +1,78 @@
+---
+source: src/lib.rs
+assertion_line: 121
+expression: examples
+---
+- - DelimitingModifier: Weak
+- - DelimitingModifier: Strong
+- - DelimitingModifier: HorizontalRule
+- - DelimitingModifier: Weak
+- - DelimitingModifier: Weak
+- - Heading:
+      level: 1
+      title:
+        - Text: Heading
+      extensions: []
+  - Paragraph:
+      - Text: Content
+  - DelimitingModifier: Weak
+  - Paragraph:
+      - Text: Dedented
+- - Heading:
+      level: 2
+      title:
+        - Text: Heading
+      extensions: []
+  - DelimitingModifier: Strong
+  - Paragraph:
+      - Text: Dedented
+      - Whitespace
+      - Text: fully
+- - Heading:
+      level: 2
+      title:
+        - Text: Heading
+      extensions: []
+  - Paragraph:
+      - Text: content
+  - DelimitingModifier: HorizontalRule
+  - Paragraph:
+      - Text: "no"
+      - Whitespace
+      - Text: indent
+      - Whitespace
+      - Text: change
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      content:
+        Paragraph:
+          - Text: list
+  - DelimitingModifier: HorizontalRule
+  - Paragraph:
+      - Text: "no"
+      - Whitespace
+      - Text: list
+- - Paragraph:
+      - Special: "-"
+      - Special: "-"
+      - Special: "-"
+      - Text: not
+      - Whitespace
+      - Text: a
+      - Whitespace
+      - Text: delimiter
+- - RangedTag:
+      name:
+        - "==nope"
+      parameters: []
+      content: []
+- - Paragraph:
+      - Special: _
+- - Paragraph:
+      - Text: hi
+      - Whitespace
+      - Special: "-"
+      - Special: "-"
+      - Special: "-"

@@ -83,6 +83,45 @@ mod tests {
     }
 
     #[test]
+    fn delimiter_mods() {
+        // TODO: test these with parse_tree() when this is merged.
+        let examples: Vec<_> = [
+            "---",
+            "===",
+            "___",
+            "  ---",
+            "------------",
+            "* Heading
+               Content
+               ---
+             Dedented",
+            "** Heading
+              ===
+            Dedented fully",
+            "** Heading
+                content
+                ___
+                no indent change",
+            "- list
+             ___
+             no list",
+            // Counter Examples
+            "---not a delimiter",
+            "===nope
+                =end",
+            "_",
+            "hi ---",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
     fn lists() {
         let examples: Vec<_> = [
             "- Test list",
