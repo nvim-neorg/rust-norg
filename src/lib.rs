@@ -530,7 +530,6 @@ mod tests {
 
     #[test]
     fn modifiers() {
-        // TODO(vhyrro): Add anti-tests for unclosed markup (which should error).
         let examples: Vec<_> = [
             "this *is* a test",
             "hello, *world*!",
@@ -538,6 +537,11 @@ mod tests {
             "*hello*, world!",
             "*/hello/*, world!",
             "*hi!* how are you?",
+
+            "this *is a test",
+            "this *is/ a test",
+            "this *is*/ a test",
+            "this */is/*/ a test",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
