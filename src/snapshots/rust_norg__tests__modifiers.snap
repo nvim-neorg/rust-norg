@@ -89,3 +89,70 @@ expression: examples
       - Token: Whitespace
       - Token:
           Text: you?
+- - Paragraph:
+      - Token:
+          Text: this
+      - Token: Whitespace
+      - Token:
+          Special: "*"
+      - Token:
+          Text: is
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: test
+- - Paragraph:
+      - Token:
+          Text: this
+      - Token: Whitespace
+      - Token:
+          Special: "*"
+      - Token:
+          Text: is
+      - Token:
+          Special: /
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: test
+- - Paragraph:
+      - Token:
+          Text: this
+      - Token: Whitespace
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - Token:
+                Text: is
+      - Token:
+          Special: /
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: test
+- - Paragraph:
+      - Token:
+          Text: this
+      - Token: Whitespace
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - AttachedModifier:
+                modifier_type: /
+                content:
+                  - Token:
+                      Text: is
+      - Token:
+          Special: /
+      - Token: Whitespace
+      - Token:
+          Text: a
+      - Token: Whitespace
+      - Token:
+          Text: test

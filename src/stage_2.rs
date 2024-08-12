@@ -43,7 +43,9 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
         .into_iter()
         .peekable()
         .batching(|it| match it.next() {
-            Some(NorgToken::Whitespace(_)) => Some(ParagraphSegmentToken::Whitespace),
+            Some(NorgToken::SingleNewline) | Some(NorgToken::Whitespace(_)) => {
+                Some(ParagraphSegmentToken::Whitespace)
+            }
             Some(NorgToken::Special(c)) => Some(ParagraphSegmentToken::Special(c)),
             Some(NorgToken::Escape(c)) => Some(ParagraphSegmentToken::Escape(c)),
             Some(NorgToken::Regular(c)) => {
@@ -401,9 +403,9 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 NorgToken::Newlines(_) => {
                     NorgBlock::ParagraphSegmentEnd(tokens_to_paragraph_segment(content))
                 }
-                NorgToken::SingleNewline => {
-                    NorgBlock::ParagraphSegment(tokens_to_paragraph_segment(content))
-                }
+                NorgToken::SingleNewline => NorgBlock::ParagraphSegment(
+                    tokens_to_paragraph_segment(content.into_iter().chain(trailing).collect()),
+                ),
                 _ => unreachable!(),
             })
             .labelled("paragraph_segment"),

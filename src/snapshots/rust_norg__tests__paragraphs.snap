@@ -33,6 +33,7 @@ expression: examples
                 Text: hello
             - Token:
                 Special: ","
+            - Token: Whitespace
             - Token:
                 Text: world
             - Token:
@@ -46,6 +47,7 @@ expression: examples
 - - Paragraph:
       - Token:
           Text: paragraph
+      - Token: Whitespace
       - Token:
           Text: here
   - Paragraph:
@@ -54,6 +56,7 @@ expression: examples
       - Token: Whitespace
       - Token:
           Text: paragraph
+      - Token: Whitespace
       - Token:
           Text: here
       - Token:
