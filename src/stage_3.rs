@@ -228,20 +228,24 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
 fn paragraph_rollup_candidates(
 ) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
 {
-    let candidate = select! { c @ ParagraphSegment::AttachedModifierCloser(_) => c, };
+    let candidate = select! { ParagraphSegment::AttachedModifierCloser(c) => c, };
 
     let attached_modifier = recursive(|attached_modifier| {
         select! {
             ParagraphSegment::AttachedModifierCandidate { modifier_type, .. } => modifier_type,
         }
         .then(attached_modifier.or(candidate.not()).repeated().at_least(1))
-        .then_ignore(candidate)
-        .map(
-            |(modifier_type, content)| ParagraphSegment::AttachedModifier {
-                modifier_type,
-                content,
-            },
-        )
+        .then(candidate)
+        .try_map(|((modifier_type, content), closer), span| {
+            if modifier_type == closer {
+                Ok(ParagraphSegment::AttachedModifier {
+                    modifier_type,
+                    content,
+                })
+            } else {
+                Err(Simple::custom(span, "differing opening and closing modifiers found"))
+            }
+        })
     });
 
     choice((attached_modifier, any())).repeated().at_least(1)
