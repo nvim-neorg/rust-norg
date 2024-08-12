@@ -6,3 +6,4 @@
 # everyone who runs the test benefits from these saved cases.
 cc fb9b5df4fe46fe331cc3aa40bba6501c1c603084688fd02dda6d1c73106c1324 # shrinks to tag_name = "A", parameter = "A", multi_parameter = "\u{b}"
 cc 28afae9872324ba0632a8023219e32939580363ce8b99752dc19fae0ac5b63d1 # shrinks to paragraph_content = " "
+cc 5b31c9987c98fc0e4faa50b782e5952e0948d2c2a60dd29081c8f54c75b4b52c # shrinks to tag_name = "ø", parameter = "a", multi_parameter = " "

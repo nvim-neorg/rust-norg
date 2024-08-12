@@ -243,7 +243,10 @@ fn paragraph_rollup_candidates(
                     content,
                 })
             } else {
-                Err(Simple::custom(span, "differing opening and closing modifiers found"))
+                Err(Simple::custom(
+                    span,
+                    "differing opening and closing modifiers found",
+                ))
             }
         })
     });
@@ -453,7 +456,15 @@ pub fn stage_3(
                 .chain(paragraph_segment_end.or_not()),
             paragraph_segment_end,
         ))
-            .map(|tokens| NorgASTFlat::Paragraph(parse_paragraph(tokens).unwrap()));
+            .map(|mut tokens| {
+                // Trim trailing whitespace (both user-induced but also induced by us when
+                // converting single newlines to whitespace).
+                if let Some(ParagraphSegmentToken::Whitespace) = tokens.last() {
+                    tokens.pop();
+                }
+
+                NorgASTFlat::Paragraph(parse_paragraph(tokens).unwrap())
+            });
 
         let nestable_detached_modifier = select! {
             NorgBlock::NestableDetachedModifier { modifier_type: '-', level, extension_section } => (NestableDetachedModifier::UnorderedList, level, extension_section),

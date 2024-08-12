@@ -537,7 +537,6 @@ mod tests {
             "*hello*, world!",
             "*/hello/*, world!",
             "*hi!* how are you?",
-
             "this *is a test",
             "this *is/ a test",
             "this *is*/ a test",
