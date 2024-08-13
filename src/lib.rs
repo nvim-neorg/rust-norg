@@ -541,6 +541,12 @@ mod tests {
             "this *is/ a test",
             "this *is*/ a test",
             "this */is/*/ a test",
+            "{$ hello!}",
+            "{/ a-path.txt}",
+            "{:/some/fp:*** a -path-.txt}",
+            "[anchor]",
+            "[anchor][description]",
+            "{* hello}[description]",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

@@ -81,7 +81,7 @@ pub enum RangedTag {
     Standard,
 }
 
-fn paragraph_parser_opener_candidates() -> impl Parser<
+fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
     ParagraphSegmentToken,
     Vec<ParagraphSegment>,
     Error = chumsky::error::Simple<ParagraphSegmentToken>,
@@ -111,10 +111,91 @@ fn paragraph_parser_opener_candidates() -> impl Parser<
             ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
         });
 
+    let anchor = just(ParagraphSegmentToken::Special('['))
+        .ignore_then(
+            just(ParagraphSegmentToken::Special(']'))
+                .not()
+                .repeated()
+                .at_least(1),
+        )
+        .then_ignore(just(ParagraphSegmentToken::Special(']')));
+
+    let link = just(ParagraphSegmentToken::Special('{'))
+        .ignore_then(
+            just(ParagraphSegmentToken::Special(':'))
+                .ignore_then(
+                    just(ParagraphSegmentToken::Special(':'))
+                        .not()
+                        .repeated()
+                        .at_least(1),
+                )
+                .then_ignore(just(ParagraphSegmentToken::Special(':')))
+                .or_not(),
+        )
+        .then(choice((
+            just(ParagraphSegmentToken::Special('*'))
+                .repeated()
+                .at_least(1)
+                .map(|tokens| "*".repeat(tokens.len())),
+            just(ParagraphSegmentToken::Special('$')).to("$".to_string()),
+            just(ParagraphSegmentToken::Special('^')).to("^".to_string()),
+            just(ParagraphSegmentToken::Special('/')).to("/".to_string()),
+            just(ParagraphSegmentToken::Special('=')).to("=".to_string()),
+            just(ParagraphSegmentToken::Special('?')).to("?".to_string()),
+            just(ParagraphSegmentToken::Special('@')).to("@".to_string()),
+        )))
+        .then_ignore(
+            just(ParagraphSegmentToken::Whitespace)
+                .repeated()
+                .at_least(1),
+        )
+        .then(
+            just(ParagraphSegmentToken::Special('}'))
+                .not()
+                .repeated()
+                .at_least(1),
+        )
+        .then_ignore(just(ParagraphSegmentToken::Special('}')))
+        .then(anchor.clone().or_not())
+        .map(
+            |(((filepath, modifiers), content), description)| ParagraphSegment::Link {
+                filepath: filepath
+                    .map(|content| content.into_iter().map_into::<String>().collect()),
+                description: description.map(|content| parse_paragraph(content).unwrap()),
+                targets: vec![match modifiers.as_str() {
+                    "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
+                    "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
+                    "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
+                    "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
+                    "/" => LinkTarget::Path(content.into_iter().map_into::<String>().collect()),
+                    "@" => {
+                        LinkTarget::Timestamp(content.into_iter().map_into::<String>().collect())
+                    }
+
+                    // Only other possibility is a heading.
+                    str => LinkTarget::Heading {
+                        level: str.len() as u16,
+                        title: parse_paragraph(content).unwrap(),
+                    },
+                }],
+            },
+        );
+
     left_empty_opening_modifier.or_not().chain(
-        choice((opening_modifier_candidate, token))
-            .repeated()
-            .at_least(1),
+        choice((
+            link,
+            anchor
+                .clone()
+                .then(anchor.or_not())
+                .map(|(content, description)| ParagraphSegment::Anchor {
+                    content: parse_paragraph(content).unwrap(),
+                    description: description.map(|content| parse_paragraph(content).unwrap()),
+                }),
+            opening_modifier_candidate,
+            token,
+        ))
+        .repeated()
+        .at_least(1),
     )
 }
 
@@ -280,6 +361,22 @@ fn eliminate_invalid_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSe
         })
 }
 
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
+pub enum LinkTarget {
+    Heading {
+        level: u16,
+        title: Vec<ParagraphSegment>,
+    },
+    Footnote(Vec<ParagraphSegment>),
+    Definition(Vec<ParagraphSegment>),
+    Generic(Vec<ParagraphSegment>),
+    Wiki(Vec<ParagraphSegment>),
+    Extendable(Vec<ParagraphSegment>),
+    Path(String),
+    Url(String),
+    Timestamp(String),
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Hash, Eq)]
 pub enum ParagraphSegment {
     Token(ParagraphSegmentToken),
@@ -313,7 +410,16 @@ pub enum ParagraphSegment {
     AttachedModifier {
         modifier_type: char,
         content: Vec<Self>,
-    }, // Links(...),
+    },
+    Link {
+        filepath: Option<String>,
+        targets: Vec<LinkTarget>,
+        description: Option<Vec<ParagraphSegment>>,
+    },
+    Anchor {
+        content: Vec<ParagraphSegment>,
+        description: Option<Vec<ParagraphSegment>>,
+    },
 }
 
 fn parse_paragraph(
@@ -324,7 +430,7 @@ fn parse_paragraph(
             .parse(unravel_candidates(
                 paragraph_parser_closer_candidates()
                     .parse(unravel_candidates(dedup_opener_candidates(
-                        paragraph_parser_opener_candidates().parse(input)?,
+                        paragraph_parser_opener_candidates_and_links().parse(input)?,
                     )))
                     .unwrap(),
             ))
