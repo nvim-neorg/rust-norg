@@ -4,21 +4,21 @@ use serde::Serialize;
 
 use crate::stage_2::{NorgBlock, ParagraphSegmentToken, ParagraphTokenList};
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum NestableDetachedModifier {
     Quote,
     UnorderedList,
     OrderedList,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum RangeableDetachedModifier {
     Definition,
     Footnote,
     Table,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum TodoStatus {
     /// ` `
     Undone,
@@ -38,7 +38,7 @@ pub enum TodoStatus {
     Canceled,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum DetachedModifierExtension {
     /// todo item status:
     /// `- ( ) undone`
@@ -69,7 +69,7 @@ pub enum DetachedModifierExtension {
     StartDate(String),
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum CarryoverTag {
     Attribute, // `+`
     Macro,     // `#`
@@ -468,7 +468,7 @@ fn parse_paragraph(
     )))
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]
 pub enum NorgASTFlat {
     Paragraph(Vec<ParagraphSegment>),
     NestableDetachedModifier {
