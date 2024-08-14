@@ -558,7 +558,7 @@ mod tests {
             "{$ hello!}",
             "{/ a-path.txt}",
             "{********* hello!}",
-            "{:/some/fp:*** a -path-.txt}",
+            "{:/some/file:*** a -path-.txt}",
             "[anchor]",
             "[anchor][description]",
             "{* hello}[description]",

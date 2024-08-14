@@ -1,11 +1,10 @@
 ---
 source: src/lib.rs
-assertion_line: 575
 expression: examples
 ---
 - - Paragraph:
       - Link:
-          filepath: what
+          filepath: ~
           targets:
             - Url: "https://github.com/nvim-neorg/neorg"
           description: ~
@@ -39,7 +38,7 @@ expression: examples
           description: ~
 - - Paragraph:
       - Link:
-          filepath: /some/fp
+          filepath: /some/file
           targets:
             - Heading:
                 level: 3
