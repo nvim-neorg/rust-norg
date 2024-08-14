@@ -541,12 +541,30 @@ mod tests {
             "this *is/ a test",
             "this *is*/ a test",
             "this */is/*/ a test",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn links() {
+        let examples: Vec<_> = [
+            "{https://github.com/nvim-neorg/neorg}",
             "{$ hello!}",
             "{/ a-path.txt}",
+            "{********* hello!}",
             "{:/some/fp:*** a -path-.txt}",
             "[anchor]",
             "[anchor][description]",
             "{* hello}[description]",
+            "[description]{* hello}",
+            "This is a <link>!",
+            "<*linkable with markup*> here!",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

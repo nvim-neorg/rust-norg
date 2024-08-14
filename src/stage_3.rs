@@ -181,16 +181,34 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             },
         );
 
+    let inline_linkable = just(ParagraphSegmentToken::Special('<'))
+        .ignore_then(
+            just(ParagraphSegmentToken::Special('>'))
+                .not()
+                .repeated()
+                .at_least(1),
+        )
+        .then_ignore(just(ParagraphSegmentToken::Special('>')))
+        .map(|content| ParagraphSegment::InlineLinkTarget(parse_paragraph(content).unwrap()));
+
     left_empty_opening_modifier.or_not().chain(
         choice((
-            link,
+            link.clone(),
             anchor
                 .clone()
-                .then(anchor.or_not())
+                .then(link)
+                .map(|(content, link)| ParagraphSegment::AnchorDefinition {
+                    content: parse_paragraph(content).unwrap(),
+                    target: Box::new(link),
+                }),
+            anchor
+                .clone()
+                .then(anchor.clone().or_not())
                 .map(|(content, description)| ParagraphSegment::Anchor {
                     content: parse_paragraph(content).unwrap(),
                     description: description.map(|content| parse_paragraph(content).unwrap()),
                 }),
+            inline_linkable,
             opening_modifier_candidate,
             token,
         ))
@@ -416,10 +434,15 @@ pub enum ParagraphSegment {
         targets: Vec<LinkTarget>,
         description: Option<Vec<ParagraphSegment>>,
     },
+    AnchorDefinition {
+        content: Vec<ParagraphSegment>,
+        target: Box<Self>,
+    },
     Anchor {
         content: Vec<ParagraphSegment>,
         description: Option<Vec<ParagraphSegment>>,
     },
+    InlineLinkTarget(Vec<ParagraphSegment>),
 }
 
 fn parse_paragraph(

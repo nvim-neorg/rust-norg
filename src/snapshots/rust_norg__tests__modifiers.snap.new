@@ -1,6 +1,6 @@
 ---
 source: src/lib.rs
-assertion_line: 552
+assertion_line: 558
 expression: examples
 ---
 - - Paragraph:
@@ -217,8 +217,20 @@ expression: examples
                   - Token:
                       Text: hello
           description:
-            - AttachedModifier:
-                modifier_type: "*"
-                content:
-                  - Token:
-                      Text: description
+            - Token:
+                Text: description
+- - Paragraph:
+      - AnchorDefinition:
+          content:
+            - Token:
+                Text: description
+          target:
+            Link:
+              filepath: ~
+              targets:
+                - Heading:
+                    level: 1
+                    title:
+                      - Token:
+                          Text: hello
+              description: ~
