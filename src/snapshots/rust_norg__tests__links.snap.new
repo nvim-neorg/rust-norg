@@ -4,36 +4,11 @@ assertion_line: 575
 expression: examples
 ---
 - - Paragraph:
-      - Token:
-          Special: "{"
-      - Token:
-          Text: https
-      - Token:
-          Special: ":"
-      - Token:
-          Special: /
-      - Token:
-          Special: /
-      - Token:
-          Text: github
-      - Token:
-          Special: "."
-      - Token:
-          Text: com
-      - Token:
-          Special: /
-      - Token:
-          Text: nvim
-      - Token:
-          Special: "-"
-      - Token:
-          Text: neorg
-      - Token:
-          Special: /
-      - Token:
-          Text: neorg
-      - Token:
-          Special: "}"
+      - Link:
+          filepath: what
+          targets:
+            - Url: "https://github.com/nvim-neorg/neorg"
+          description: ~
 - - Paragraph:
       - Link:
           filepath: ~
