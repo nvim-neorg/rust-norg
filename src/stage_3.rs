@@ -132,22 +132,25 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 .then_ignore(just(ParagraphSegmentToken::Special(':')))
                 .or_not(),
         )
-        .then(choice((
-            just(ParagraphSegmentToken::Special('*'))
-                .repeated()
-                .at_least(1)
-                .map(|tokens| "*".repeat(tokens.len())),
-            just(ParagraphSegmentToken::Special('$')).to("$".to_string()),
-            just(ParagraphSegmentToken::Special('^')).to("^".to_string()),
-            just(ParagraphSegmentToken::Special('/')).to("/".to_string()),
-            just(ParagraphSegmentToken::Special('=')).to("=".to_string()),
-            just(ParagraphSegmentToken::Special('?')).to("?".to_string()),
-            just(ParagraphSegmentToken::Special('@')).to("@".to_string()),
-        )))
-        .then_ignore(
-            just(ParagraphSegmentToken::Whitespace)
-                .repeated()
-                .at_least(1),
+        .then(
+            choice((
+                just(ParagraphSegmentToken::Special('*'))
+                    .repeated()
+                    .at_least(1)
+                    .map(|tokens| "*".repeat(tokens.len())),
+                just(ParagraphSegmentToken::Special('$')).to("$".to_string()),
+                just(ParagraphSegmentToken::Special('^')).to("^".to_string()),
+                just(ParagraphSegmentToken::Special('/')).to("/".to_string()),
+                just(ParagraphSegmentToken::Special('=')).to("=".to_string()),
+                just(ParagraphSegmentToken::Special('?')).to("?".to_string()),
+                just(ParagraphSegmentToken::Special('@')).to("@".to_string()),
+            ))
+            .then_ignore(
+                just(ParagraphSegmentToken::Whitespace)
+                    .repeated()
+                    .at_least(1),
+            )
+            .or_not(),
         )
         .then(
             just(ParagraphSegmentToken::Special('}'))
@@ -162,21 +165,25 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 filepath: filepath
                     .map(|content| content.into_iter().map_into::<String>().collect()),
                 description: description.map(|content| parse_paragraph(content).unwrap()),
-                targets: vec![match modifiers.as_str() {
-                    "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
-                    "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
-                    "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
-                    "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
-                    "/" => LinkTarget::Path(content.into_iter().map_into::<String>().collect()),
-                    "@" => {
-                        LinkTarget::Timestamp(content.into_iter().map_into::<String>().collect())
-                    }
+                targets: vec![if let Some(modifiers) = modifiers {
+                    match modifiers.as_str() {
+                        "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
+                        "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
+                        "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
+                        "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
+                        "/" => LinkTarget::Path(content.into_iter().map_into::<String>().collect()),
+                        "@" => LinkTarget::Timestamp(
+                            content.into_iter().map_into::<String>().collect(),
+                        ),
 
-                    // Only other possibility is a heading.
-                    str => LinkTarget::Heading {
-                        level: str.len() as u16,
-                        title: parse_paragraph(content).unwrap(),
-                    },
+                        // Only other possibility is a heading.
+                        str => LinkTarget::Heading {
+                            level: str.len() as u16,
+                            title: parse_paragraph(content).unwrap(),
+                        },
+                    }
+                } else {
+                    LinkTarget::Url(content.into_iter().map_into::<String>().collect())
                 }],
             },
         );
