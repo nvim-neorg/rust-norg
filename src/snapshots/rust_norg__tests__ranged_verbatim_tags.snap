@@ -13,7 +13,7 @@ expression: examples
         - some-text
         - here
       parameters:
-        - lua language
+        - "lua\\ language"
         - second-parameter
       content: "print(\"Hello world!\")\n"
 - - VerbatimRangedTag:

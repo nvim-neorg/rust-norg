@@ -20,9 +20,7 @@ pub enum ParagraphSegmentToken {
 impl std::fmt::Display for ParagraphSegmentToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            // Here, we purposefully strip the `\` backslash from the escape sequence to make
-            // output cleaner. This is unlikely to have any serious consequences.
-            Self::Escape(c) => f.write_char(*c),
+            Self::Escape(c) => write!(f, "\\{}", c),
             Self::Text(str) => f.write_str(str),
             Self::Special(c) => f.write_char(*c),
             Self::Whitespace => f.write_char(' '),

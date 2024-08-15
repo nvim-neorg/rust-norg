@@ -21,7 +21,7 @@ expression: examples
         - some-text
         - here
       parameters:
-        - one parameter
+        - "one\\ parameter"
         - second-parameter
       content:
         - CarryoverTag:
@@ -109,7 +109,7 @@ expression: examples
         - some-text
         - here
       parameters:
-        - one parameter
+        - "one\\ parameter"
         - second-parameter
       content:
         - CarryoverTag:

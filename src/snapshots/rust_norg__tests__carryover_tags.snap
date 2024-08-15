@@ -35,7 +35,7 @@ expression: examples
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
       next_object:
         Paragraph:
           - Token:
@@ -45,7 +45,7 @@ expression: examples
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
         - "&^@!"
         - third
         - parameter
@@ -98,7 +98,7 @@ expression: examples
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
       next_object:
         Paragraph:
           - Token:
@@ -108,7 +108,7 @@ expression: examples
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
         - "&^@!"
         - third
         - parameter

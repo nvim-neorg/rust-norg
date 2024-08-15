@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/lib.rs
 expression: examples
 ---
 - - InfirmTag:
@@ -19,12 +19,12 @@ expression: examples
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
 - - InfirmTag:
       name:
         - tag-name_
       parameters:
-        - one large parameter
+        - "one\\ large\\ parameter"
         - "&^@!"
         - third
         - parameter

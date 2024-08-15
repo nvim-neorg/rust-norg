@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use chumsky::prelude::*;
 use itertools::Itertools;
 use serde::Serialize;
@@ -11,11 +13,31 @@ pub enum NestableDetachedModifier {
     OrderedList,
 }
 
+impl std::fmt::Display for NestableDetachedModifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Quote => f.write_char('>'),
+            Self::UnorderedList => f.write_char('-'),
+            Self::OrderedList => f.write_char('~'),
+        }
+    }
+}
+
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum RangeableDetachedModifier {
     Definition,
     Footnote,
     Table,
+}
+
+impl std::fmt::Display for RangeableDetachedModifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Definition => f.write_char('$'),
+            Self::Footnote => f.write_char('^'),
+            Self::Table => f.write_char(':'),
+        }
+    }
 }
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
@@ -531,13 +553,8 @@ fn detached_modifier_extensions() -> impl Parser<
                 .map(|tokens| {
                     if let Some(tokens) = tokens {
                         tokens
-                            .iter()
-                            .map(|spec| match spec {
-                                Special(char) => char.to_string(),
-                                Text(str) => str.to_owned(),
-                                Escape(char) => format!(r"\{}", char),
-                                Whitespace => ' '.to_string(),
-                            })
+                            .into_iter()
+                            .map_into::<String>()
                             .collect()
                     } else {
                         String::from("")
