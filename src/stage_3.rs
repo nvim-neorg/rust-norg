@@ -501,13 +501,13 @@ pub enum NorgASTFlat {
     },
     RangeableDetachedModifier {
         modifier_type: RangeableDetachedModifier,
-        title: ParagraphTokenList,
+        title: Vec<ParagraphSegment>,
         extensions: Vec<DetachedModifierExtension>,
         content: Vec<Self>,
     },
     Heading {
         level: u16,
-        title: ParagraphTokenList,
+        title: Vec<ParagraphSegment>,
         extensions: Vec<DetachedModifierExtension>,
     },
     CarryoverTag {
@@ -636,7 +636,7 @@ pub fn stage_3(
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: false, title, extension_section } => (RangeableDetachedModifier::Table, title, extension_section),
         }.then(paragraph).map(|((modifier_type, title, extension_section), paragraph)| NorgASTFlat::RangeableDetachedModifier {
                 modifier_type,
-                title,
+                title: parse_paragraph(title).unwrap(),
                 extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
                 content: vec![paragraph],
             });
@@ -652,7 +652,7 @@ pub fn stage_3(
                 if opening_ch == closing_ch {
                     Ok(NorgASTFlat::RangeableDetachedModifier {
                         modifier_type,
-                        title,
+                        title: parse_paragraph(title).unwrap(),
                         extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
                         content,
                     })
@@ -665,7 +665,7 @@ pub fn stage_3(
         }
         .try_map(move |(level, title, extension_section), _span| Ok(NorgASTFlat::Heading {
             level,
-            title,
+            title: parse_paragraph(title).unwrap(),
             extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
         }));
 

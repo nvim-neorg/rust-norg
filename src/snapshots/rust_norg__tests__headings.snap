@@ -5,17 +5,20 @@ expression: examples
 - - Heading:
       level: 1
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
 - - Heading:
       level: 9
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
 - - Heading:
       level: 1
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
   - Paragraph:
       - Token:
@@ -25,45 +28,56 @@ expression: examples
 - - Heading:
       level: 7
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
 - - Heading:
       level: 1
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
   - Heading:
       level: 1
       title:
-        - Text: Another
-        - Whitespace
-        - Text: heading
+        - Token:
+            Text: Another
+        - Token: Whitespace
+        - Token:
+            Text: heading
       extensions: []
 - - Heading:
       level: 1
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
   - Heading:
       level: 2
       title:
-        - Text: Subheading
+        - Token:
+            Text: Subheading
       extensions: []
   - Heading:
       level: 1
       title:
-        - Text: Back
-        - Whitespace
-        - Text: to
-        - Whitespace
-        - Text: regular
-        - Whitespace
-        - Text: heading
+        - Token:
+            Text: Back
+        - Token: Whitespace
+        - Token:
+            Text: to
+        - Token: Whitespace
+        - Token:
+            Text: regular
+        - Token: Whitespace
+        - Token:
+            Text: heading
       extensions: []
 - - Heading:
       level: 1
       title:
-        - Text: Heading
+        - Token:
+            Text: Heading
       extensions: []
   - Paragraph:
       - Token:
@@ -76,7 +90,8 @@ expression: examples
   - Heading:
       level: 2
       title:
-        - Text: Subheading
+        - Token:
+            Text: Subheading
       extensions: []
   - Paragraph:
       - Token:
@@ -95,11 +110,15 @@ expression: examples
   - Heading:
       level: 1
       title:
-        - Text: Back
-        - Whitespace
-        - Text: to
-        - Whitespace
-        - Text: regular
-        - Whitespace
-        - Text: heading
+        - Token:
+            Text: Back
+        - Token: Whitespace
+        - Token:
+            Text: to
+        - Token: Whitespace
+        - Token:
+            Text: regular
+        - Token: Whitespace
+        - Token:
+            Text: heading
       extensions: []

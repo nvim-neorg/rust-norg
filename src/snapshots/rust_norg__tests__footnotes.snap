@@ -5,7 +5,8 @@ expression: examples
 - - RangeableDetachedModifier:
       modifier_type: Footnote
       title:
-        - Text: Title
+        - Token:
+            Text: Title
       extensions: []
       content:
         - Paragraph:
@@ -14,7 +15,8 @@ expression: examples
 - - RangeableDetachedModifier:
       modifier_type: Footnote
       title:
-        - Text: Title
+        - Token:
+            Text: Title
       extensions: []
       content:
         - Paragraph:

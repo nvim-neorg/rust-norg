@@ -5,7 +5,8 @@ expression: examples
 - - RangeableDetachedModifier:
       modifier_type: Definition
       title:
-        - Text: Term
+        - Token:
+            Text: Term
       extensions: []
       content:
         - Paragraph:
@@ -14,7 +15,8 @@ expression: examples
 - - RangeableDetachedModifier:
       modifier_type: Definition
       title:
-        - Text: Term
+        - Token:
+            Text: Term
       extensions: []
       content:
         - Paragraph:
