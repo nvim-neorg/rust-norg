@@ -7,3 +7,7 @@
 cc fb9b5df4fe46fe331cc3aa40bba6501c1c603084688fd02dda6d1c73106c1324 # shrinks to tag_name = "A", parameter = "A", multi_parameter = "\u{b}"
 cc 28afae9872324ba0632a8023219e32939580363ce8b99752dc19fae0ac5b63d1 # shrinks to paragraph_content = " "
 cc 5b31c9987c98fc0e4faa50b782e5952e0948d2c2a60dd29081c8f54c75b4b52c # shrinks to tag_name = "ø", parameter = "a", multi_parameter = " "
+cc 67cb989806791583bc835dd766e8f7ef294a1a634f6857cd8e6dd16a49a09246 # shrinks to tag_name = "\u{1d165}", parameter = "<*\u{2060}>", multi_parameter = "a", content = ""
+cc cacc392d5a052fbd56e86b2ae08c6380a7a191847001424d938930b94e0f449f # shrinks to tag_type = "@", tag_name = "a", parameter = "a", multi_parameter = "<*0>", content = "\u{2060}"
+cc 15209ad4b4a04639c42c6f2d9629decdcd554a46a3638a63a8a04f9822a3d33c # shrinks to tag_name = "0", parameter = "a", multi_parameter = "\\", content = "\\"
+cc 98c6844a3274a61cba1c4be4bf931c3c136b24dbe9c75187f53e9e6a45a1508d # shrinks to tag_type = "@", tag_name = "𖩠", parameter = "!", multi_parameter = "\t", content = "a\\"

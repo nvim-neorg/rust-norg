@@ -1,0 +1,108 @@
+---
+source: src/lib.rs
+assertion_line: 171
+expression: examples
+---
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: base
+      content: []
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: one
+      content:
+        - NestableDetachedModifier:
+            modifier_type: UnorderedList
+            level: 2
+            extensions: []
+            text:
+              Paragraph:
+                - Token:
+                    Text: two
+            content: []
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: one
+      content:
+        - NestableDetachedModifier:
+            modifier_type: UnorderedList
+            level: 2
+            extensions: []
+            text:
+              Paragraph:
+                - Token:
+                    Text: two
+                - Token: Whitespace
+                - Token:
+                    Text: with
+                - Token: Whitespace
+                - Token:
+                    Text: content
+            content: []
+        - NestableDetachedModifier:
+            modifier_type: UnorderedList
+            level: 2
+            extensions: []
+            text:
+              Paragraph:
+                - Token:
+                    Text: two
+                - Token: Whitespace
+                - Token:
+                    Special: (
+                - Token:
+                    Text: "2"
+                - Token:
+                    Special: )
+            content:
+              - NestableDetachedModifier:
+                  modifier_type: UnorderedList
+                  level: 3
+                  extensions: []
+                  text:
+                    Paragraph:
+                      - Token:
+                          Text: three
+                  content: []
+  - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: one
+      content: []
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 2
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: two
+      content: []
+  - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: one
+      content: []

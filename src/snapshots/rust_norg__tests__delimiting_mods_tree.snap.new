@@ -1,0 +1,104 @@
+---
+source: src/lib.rs
+assertion_line: 148
+expression: examples
+---
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: One
+      extensions: []
+      content:
+        - Paragraph:
+            - Token:
+                Text: content
+  - Paragraph:
+      - Token:
+          Text: dedented
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: One
+      extensions: []
+      content:
+        - Heading:
+            level: 2
+            title:
+              - Token:
+                  Text: Two
+            extensions: []
+            content: []
+  - Paragraph:
+      - Token:
+          Text: none
+- - Heading:
+      level: 2
+      title:
+        - Token:
+            Text: Two
+      extensions: []
+      content:
+        - Paragraph:
+            - Token:
+                Text: two
+        - DelimitingModifier: HorizontalRule
+        - Paragraph:
+            - Token:
+                Text: two
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions: []
+      text:
+        Paragraph:
+          - Token:
+              Text: list
+      content: []
+  - DelimitingModifier: HorizontalRule
+  - Paragraph:
+      - Token:
+          Text: "no"
+      - Token: Whitespace
+      - Token:
+          Text: list
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: One
+      extensions: []
+      content:
+        - Paragraph:
+            - Token:
+                Text: one
+        - Heading:
+            level: 2
+            title:
+              - Token:
+                  Text: Two
+            extensions: []
+            content:
+              - Paragraph:
+                  - Token:
+                      Text: two
+              - Heading:
+                  level: 3
+                  title:
+                    - Token:
+                        Text: Three
+                  extensions: []
+                  content:
+                    - Paragraph:
+                        - Token:
+                            Text: three
+              - Paragraph:
+                  - Token:
+                      Text: two
+        - Paragraph:
+            - Token:
+                Text: one
+  - Paragraph:
+      - Token:
+          Text: none
