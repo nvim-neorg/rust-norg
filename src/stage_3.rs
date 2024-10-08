@@ -178,7 +178,8 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             just(ParagraphSegmentToken::Special('}'))
                 .not()
                 .repeated()
-                .at_least(1),
+                .at_least(1)
+                .or_not(),
         )
         .then_ignore(just(ParagraphSegmentToken::Special('}')))
         .then(anchor.clone().or_not())
@@ -187,26 +188,32 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 filepath: filepath
                     .map(|content| content.into_iter().map_into::<String>().collect()),
                 description: description.map(|content| parse_paragraph(content).unwrap()),
-                targets: vec![if let Some(modifiers) = modifiers {
-                    match modifiers.as_str() {
-                        "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
-                        "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
-                        "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
-                        "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
-                        "/" => LinkTarget::Path(content.into_iter().map_into::<String>().collect()),
-                        "@" => LinkTarget::Timestamp(
-                            content.into_iter().map_into::<String>().collect(),
-                        ),
+                targets: if let Some(content) = content {
+                    vec![if let Some(modifiers) = modifiers {
+                        match modifiers.as_str() {
+                            "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
+                            "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
+                            "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
+                            "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
+                            "/" => {
+                                LinkTarget::Path(content.into_iter().map_into::<String>().collect())
+                            }
+                            "@" => LinkTarget::Timestamp(
+                                content.into_iter().map_into::<String>().collect(),
+                            ),
 
-                        // Only other possibility is a heading.
-                        str => LinkTarget::Heading {
-                            level: str.len() as u16,
-                            title: parse_paragraph(content).unwrap(),
-                        },
-                    }
+                            // Only other possibility is a heading.
+                            str => LinkTarget::Heading {
+                                level: str.len() as u16,
+                                title: parse_paragraph(content).unwrap(),
+                            },
+                        }
+                    } else {
+                        LinkTarget::Url(content.into_iter().map_into::<String>().collect())
+                    }]
                 } else {
-                    LinkTarget::Url(content.into_iter().map_into::<String>().collect())
-                }],
+                    vec![]
+                },
             },
         );
 
