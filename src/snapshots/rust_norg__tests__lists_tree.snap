@@ -1,6 +1,5 @@
 ---
 source: src/lib.rs
-assertion_line: 171
 expression: examples
 ---
 - - NestableDetachedModifier:

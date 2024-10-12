@@ -1,6 +1,5 @@
 ---
 source: src/lib.rs
-assertion_line: 109
 expression: headings_tree_examples
 ---
 - - Heading:

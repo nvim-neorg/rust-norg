@@ -1,6 +1,5 @@
 ---
 source: src/lib.rs
-assertion_line: 148
 expression: examples
 ---
 - - Heading:
