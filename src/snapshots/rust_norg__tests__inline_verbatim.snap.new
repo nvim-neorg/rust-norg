@@ -1,6 +1,6 @@
 ---
 source: src/lib.rs
-assertion_line: 587
+assertion_line: 588
 expression: examples
 ---
 - - Paragraph:
@@ -40,3 +40,18 @@ expression: examples
             - Token: Whitespace
             - Token:
                 Text: anchor
+- - Paragraph:
+      - InlineVerbatim:
+          - Special: "*"
+          - Text: markup
+          - Special: "*"
+          - Whitespace
+          - Special: /
+          - Text: inside
+          - Special: /
+          - Whitespace
+          - Special: /
+          - Special: "-"
+          - Text: verbatim
+          - Special: "-"
+          - Special: /

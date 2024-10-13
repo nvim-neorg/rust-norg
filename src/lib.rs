@@ -577,6 +577,7 @@ mod tests {
             "some text `inline verbatim`",
             "`verbatim at start`",
             "{/ some_link.txt}[with `inline verbatim` in anchor]",
+            "`*markup* /inside/ /-verbatim-/`",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
