@@ -491,7 +491,19 @@ mod tests {
             ---- four
             #id 3
             --- three
+            ",
             "
+            #comment
+            multi-line
+            comments
+            ---
+            out
+            ",
+            "
+            #id 123
+            #comment
+            comment with id
+            ",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

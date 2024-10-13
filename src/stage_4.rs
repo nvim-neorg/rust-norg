@@ -2,8 +2,7 @@ use serde::Serialize;
 
 use crate::{
     stage_3::{DelimitingModifier, NorgASTFlat, ParagraphSegment},
-    CarryoverTag, DetachedModifierExtension, NestableDetachedModifier,
-    RangeableDetachedModifier,
+    CarryoverTag, DetachedModifierExtension, NestableDetachedModifier, RangeableDetachedModifier,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Serialize)]
@@ -54,18 +53,6 @@ pub enum NorgAST {
 fn convert(flat: NorgASTFlat) -> NorgAST {
     match flat {
         NorgASTFlat::Paragraph(tokens) => NorgAST::Paragraph(tokens),
-        NorgASTFlat::NestableDetachedModifier {
-            modifier_type,
-            level,
-            extensions,
-            content,
-        } => NorgAST::NestableDetachedModifier {
-            modifier_type,
-            level,
-            extensions,
-            text: content,
-            content: vec![],
-        },
         NorgASTFlat::RangeableDetachedModifier {
             modifier_type,
             title,
@@ -76,28 +63,6 @@ fn convert(flat: NorgASTFlat) -> NorgAST {
             title,
             extensions,
             content,
-        },
-        NorgASTFlat::Heading {
-            level,
-            title,
-            extensions,
-        } => NorgAST::Heading {
-            level,
-            title,
-            extensions,
-            content: vec![],
-        },
-        NorgASTFlat::CarryoverTag {
-            tag_type,
-            name,
-            parameters,
-            ..
-        } => NorgAST::CarryoverTag {
-            // really, this case should not be reached, we might want to panic here
-            tag_type,
-            name,
-            parameters,
-            next_object: Box::new(NorgAST::Paragraph(vec![])),
         },
         NorgASTFlat::VerbatimRangedTag {
             name,
@@ -119,6 +84,39 @@ fn convert(flat: NorgASTFlat) -> NorgAST {
         },
         NorgASTFlat::InfirmTag { name, parameters } => NorgAST::InfirmTag { name, parameters },
         NorgASTFlat::DelimitingModifier(t) => NorgAST::DelimitingModifier(t),
+        NorgASTFlat::NestableDetachedModifier {
+            modifier_type,
+            level,
+            extensions,
+            content,
+        } => NorgAST::NestableDetachedModifier {
+            modifier_type,
+            level,
+            extensions,
+            text: content,
+            content: vec![],
+        },
+        NorgASTFlat::Heading {
+            level,
+            title,
+            extensions,
+        } => NorgAST::Heading {
+            level,
+            title,
+            extensions,
+            content: vec![],
+        },
+        NorgASTFlat::CarryoverTag {
+            tag_type,
+            name,
+            parameters,
+            next_object,
+        } => NorgAST::CarryoverTag {
+            tag_type,
+            name,
+            parameters,
+            next_object: Box::new(convert(*next_object.clone())),
+        },
     }
 }
 
@@ -262,14 +260,7 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                 name,
                 parameters,
                 next_object,
-                // TODO: match list item, and then add a case in the if let in the block to handle
-                // it
-                // then alter consume functions to work with tagged headings/list items
-            } if matches!(
-                **next_object,
-                NorgASTFlat::Heading { .. } | NorgASTFlat::NestableDetachedModifier { .. }
-            ) =>
-            {
+            } => {
                 match *next_object.clone() {
                     NorgASTFlat::Heading {
                         level,
@@ -311,7 +302,7 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                         })
                     }
                     _ => {
-                        unreachable!();
+                        ast.push(convert(item.clone()))
                     }
                 }
             }

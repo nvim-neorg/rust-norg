@@ -94,3 +94,45 @@ expression: examples
                         - Token:
                             Text: three
                     content: []
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - comment
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: multi
+          - Token:
+              Special: "-"
+          - Token:
+              Text: line
+          - Token: Whitespace
+          - Token:
+              Text: comments
+  - DelimitingModifier: Weak
+  - Paragraph:
+      - Token:
+          Text: out
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - id
+      parameters:
+        - "123"
+      next_object:
+        CarryoverTag:
+          tag_type: Macro
+          name:
+            - comment
+          parameters: []
+          next_object:
+            Paragraph:
+              - Token:
+                  Text: comment
+              - Token: Whitespace
+              - Token:
+                  Text: with
+              - Token: Whitespace
+              - Token:
+                  Text: id
