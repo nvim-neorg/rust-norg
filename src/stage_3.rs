@@ -133,6 +133,16 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
         });
 
+    let inline_verbatim = just(ParagraphSegmentToken::Special('`'))
+        .ignore_then(
+            just(ParagraphSegmentToken::Special('`'))
+                .not()
+                .repeated()
+                .at_least(1),
+        )
+        .then_ignore(just(ParagraphSegmentToken::Special('`')))
+        .map(|content| ParagraphSegment::InlineVerbatim(content));
+
     let anchor = just(ParagraphSegmentToken::Special('['))
         .ignore_then(
             just(ParagraphSegmentToken::Special(']'))
@@ -230,6 +240,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                     content: parse_paragraph(content).unwrap(),
                     target: Box::new(link),
                 }),
+            inline_verbatim,
             anchor
                 .clone()
                 .then(anchor.clone().or_not())
@@ -472,6 +483,7 @@ pub enum ParagraphSegment {
         description: Option<Vec<ParagraphSegment>>,
     },
     InlineLinkTarget(Vec<ParagraphSegment>),
+    InlineVerbatim(Vec<ParagraphSegmentToken>),
 }
 
 fn parse_paragraph(

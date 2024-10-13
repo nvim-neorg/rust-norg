@@ -570,4 +570,20 @@ mod tests {
 
         assert_yaml_snapshot!(examples);
     }
+
+    #[test]
+    fn inline_verbatim() {
+        let examples: Vec<_> = [
+            "some text `inline verbatim`",
+            "`verbatim at start`",
+            "{/ some_link.txt}[with `inline verbatim` in anchor]",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
 }
