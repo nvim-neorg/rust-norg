@@ -1,0 +1,138 @@
+---
+source: src/lib.rs
+expression: examples
+---
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - id
+      parameters:
+        - "123"
+      next_object:
+        Heading:
+          level: 1
+          title:
+            - Token:
+                Text: tree
+          extensions: []
+          content:
+            - Heading:
+                level: 2
+                title:
+                  - Token:
+                      Text: nested
+                extensions: []
+                content: []
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: tree
+      extensions: []
+      content:
+        - CarryoverTag:
+            tag_type: Macro
+            name:
+              - id
+            parameters:
+              - there
+            next_object:
+              Heading:
+                level: 2
+                title:
+                  - Token:
+                      Text: nested
+                extensions: []
+                content: []
+        - Paragraph:
+            - Token:
+                Text: part
+            - Token: Whitespace
+            - Token:
+                Text: of
+            - Token: Whitespace
+            - Token:
+                Text: tree
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - name
+      parameters:
+        - main
+      next_object:
+        NestableDetachedModifier:
+          modifier_type: UnorderedList
+          level: 2
+          extensions: []
+          text:
+            Paragraph:
+              - Token:
+                  Text: two
+          content:
+            - NestableDetachedModifier:
+                modifier_type: UnorderedList
+                level: 4
+                extensions: []
+                text:
+                  Paragraph:
+                    - Token:
+                        Text: four
+                content: []
+            - CarryoverTag:
+                tag_type: Macro
+                name:
+                  - id
+                parameters:
+                  - "3"
+                next_object:
+                  NestableDetachedModifier:
+                    modifier_type: UnorderedList
+                    level: 3
+                    extensions: []
+                    text:
+                      Paragraph:
+                        - Token:
+                            Text: three
+                    content: []
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - comment
+      parameters: []
+      next_object:
+        Paragraph:
+          - Token:
+              Text: multi
+          - Token:
+              Special: "-"
+          - Token:
+              Text: line
+          - Token: Whitespace
+          - Token:
+              Text: comments
+  - DelimitingModifier: Weak
+  - Paragraph:
+      - Token:
+          Text: out
+- - CarryoverTag:
+      tag_type: Macro
+      name:
+        - id
+      parameters:
+        - "123"
+      next_object:
+        CarryoverTag:
+          tag_type: Macro
+          name:
+            - comment
+          parameters: []
+          next_object:
+            Paragraph:
+              - Token:
+                  Text: comment
+              - Token: Whitespace
+              - Token:
+                  Text: with
+              - Token: Whitespace
+              - Token:
+                  Text: id

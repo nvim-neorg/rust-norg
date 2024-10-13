@@ -1,0 +1,54 @@
+---
+source: src/lib.rs
+expression: headings_tree_examples
+---
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: Heading
+      extensions: []
+      content:
+        - Heading:
+            level: 2
+            title:
+              - Token:
+                  Text: Another
+              - Token: Whitespace
+              - Token:
+                  Text: heading
+            extensions: []
+            content: []
+- - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: Heading
+      extensions: []
+      content:
+        - Heading:
+            level: 2
+            title:
+              - Token:
+                  Text: Subheading
+            extensions: []
+            content:
+              - Paragraph:
+                  - Token:
+                      Text: content
+  - Heading:
+      level: 1
+      title:
+        - Token:
+            Text: Back
+        - Token: Whitespace
+        - Token:
+            Text: to
+        - Token: Whitespace
+        - Token:
+            Text: regular
+        - Token: Whitespace
+        - Token:
+            Text: heading
+      extensions: []
+      content: []
