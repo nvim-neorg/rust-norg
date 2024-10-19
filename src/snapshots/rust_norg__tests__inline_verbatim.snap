@@ -1,0 +1,57 @@
+---
+source: src/lib.rs
+assertion_line: 588
+expression: examples
+---
+- - Paragraph:
+      - Token:
+          Text: some
+      - Token: Whitespace
+      - Token:
+          Text: text
+      - Token: Whitespace
+      - InlineVerbatim:
+          - Text: inline
+          - Whitespace
+          - Text: verbatim
+- - Paragraph:
+      - InlineVerbatim:
+          - Text: verbatim
+          - Whitespace
+          - Text: at
+          - Whitespace
+          - Text: start
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Path: some_link.txt
+          description:
+            - Token:
+                Text: with
+            - Token: Whitespace
+            - InlineVerbatim:
+                - Text: inline
+                - Whitespace
+                - Text: verbatim
+            - Token: Whitespace
+            - Token:
+                Text: in
+            - Token: Whitespace
+            - Token:
+                Text: anchor
+- - Paragraph:
+      - InlineVerbatim:
+          - Special: "*"
+          - Text: markup
+          - Special: "*"
+          - Whitespace
+          - Special: /
+          - Text: inside
+          - Special: /
+          - Whitespace
+          - Special: /
+          - Special: "-"
+          - Text: verbatim
+          - Special: "-"
+          - Special: /
