@@ -697,6 +697,7 @@ mod tests {
             "[description]{* hello}",
             "This is a <link>!",
             "<*linkable with markup*> here!",
+            "{:another_file:}",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
