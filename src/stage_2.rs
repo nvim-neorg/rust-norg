@@ -57,7 +57,9 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
                 Some(ParagraphSegmentToken::Text(result))
             }
             None => None,
-            _ => unreachable!(),
+            x => {
+                unreachable!();
+            }
         })
         .collect()
 }
@@ -115,6 +117,8 @@ pub enum NorgBlock {
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
     },
+    /// A delimiting modifier, defined by a single char `-` (weak), `=` (string), or `_` (horizontal rule)
+    DelimitingModifier(char),
 }
 
 /// Defines the parser for stage 2 of the Norg parsing process, which converts tokens into blocks.
@@ -262,20 +266,30 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 End(x) if x == c => x,
         };
 
+        let tag_parameters = select! {
+            Newlines(_) => (),
+            SingleNewline => (),
+            Whitespace(_) => (),
+            Eof => (),
+            End(x) if x == c => ()
+        }
+        .not()
+        .repeated()
+        .at_least(1)
+        .separated_by(whitespace.repeated().at_least(1));
+
         parse_char
             .ignore_then(newlines_whitespace_or_eof.not().repeated().at_least(1))
             .then(
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .ignore_then(tag_parameters)
                     .or_not(),
             )
-            .then_ignore(select! {
-                SingleNewline => (),
-                Newlines(_) => (),
-            })
-            .then(tag_end.not().repeated())
+            .then_ignore(just(SingleNewline).or_not())
+            .then_ignore(filter(|c| matches!(c, Newlines(_))).or_not())
+            .then(tag_end.not().repeated().or_not())
             .then_ignore(tag_end)
             .map(
                 |((name, parameters), content)| NorgBlock::VerbatimRangedTag {
@@ -286,7 +300,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                             .map(tokens_to_paragraph_segment)
                             .collect()
                     }),
-                    content,
+                    content: content.unwrap_or(vec![]),
                 },
             )
     };
@@ -377,9 +391,18 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         NorgToken::End(c) => NorgBlock::RangedTagEnd(c),
     };
 
+    let delimiting_mod = select! {
+        NorgToken::Special(c @ ('-' | '=' | '_')) => c,
+    }
+    .repeated()
+    .at_least(2)
+    .then_ignore(newlines_or_eof)
+    .map(|chars| NorgBlock::DelimitingModifier(chars[0]));
+
     choice((
         heading,
         nestable_detached_modifier,
+        delimiting_mod,
         rangeable_mod('$'),
         rangeable_mod_closer('$'),
         rangeable_mod('^'),

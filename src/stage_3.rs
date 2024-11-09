@@ -530,6 +530,14 @@ pub enum NorgASTFlat {
         name: Vec<String>,
         parameters: Vec<String>,
     },
+    DelimitingModifier(DelimitingModifier),
+}
+
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
+pub enum DelimitingModifier {
+    Weak,
+    Strong,
+    HorizontalRule,
 }
 
 fn detached_modifier_extensions() -> impl Parser<
@@ -711,11 +719,18 @@ pub fn stage_3(
             NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect() },
         };
 
+        let delimiting_mod = select! {
+            NorgBlock::DelimitingModifier('-') => NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak),
+            NorgBlock::DelimitingModifier('=') => NorgASTFlat::DelimitingModifier(DelimitingModifier::Strong),
+            NorgBlock::DelimitingModifier('_') => NorgASTFlat::DelimitingModifier(DelimitingModifier::HorizontalRule),
+        };
+
         choice((
             carryover_tag,
             verbatim_ranged_tag,
             ranged_tag,
             infirm_tag,
+            delimiting_mod,
             heading,
             nestable_detached_modifier,
             nonranged_detached_modifier,

@@ -1,16 +1,19 @@
 use chumsky::Parser as _;
 use error::NorgParseError;
 
-use crate::stage_1::stage_1;
+pub use crate::stage_1::stage_1;
 use crate::stage_2::stage_2;
+use crate::stage_4::stage_4;
 
 pub use crate::stage_2::ParagraphSegmentToken;
 pub use crate::stage_3::*;
+pub use crate::stage_4::NorgAST;
 
 mod error;
 mod stage_1;
 mod stage_2;
 mod stage_3;
+mod stage_4;
 
 /// Parses the given input string through multiple stages to produce a flattened abstract syntax tree (AST).
 ///
@@ -26,13 +29,19 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
     Ok(stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?)
 }
 
+pub fn parse_tree(input: &str) -> Result<Vec<NorgAST>, NorgParseError> {
+    Ok(stage_4(
+        stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use insta::assert_yaml_snapshot;
     use itertools::Itertools;
     use proptest::{prop_oneof, proptest};
 
-    use crate::parse;
+    use crate::{parse, parse_tree};
 
     const TAG_NAME_REGEX: &str = r"[\w_\-\.\d]+";
     const TAG_PARAMETER_REGEX: &str = r"[^\s]+";
@@ -75,6 +84,90 @@ mod tests {
         .try_collect()
         .unwrap();
 
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn headings_tree() {
+        let headings_tree_examples: Vec<_> = [
+            "
+            * Heading
+            ** Another heading
+            ",
+            "
+            * Heading
+            ** Subheading
+            content
+            * Back to regular heading
+            ",
+        ]
+            .into_iter()
+            .map(|example| example.to_string() + "\n")
+            .map(|str| parse_tree(&str))
+            .try_collect()
+            .unwrap();
+        assert_yaml_snapshot!(headings_tree_examples);
+    }
+
+    #[test]
+    fn delimiting_mods_tree() {
+        let examples: Vec<_> = [
+            "* One
+               content
+               ---
+             dedented",
+            "* One
+             ** Two
+                ===
+             none",
+            "** Two
+                two
+                ___
+                two",
+            "- list
+             ___
+             no list",
+            "* One
+               one
+             ** Two
+                two
+             *** Three
+                 three
+                 ---
+                two
+                ---
+               one
+               ---
+             none",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse_tree(&str))
+        .try_collect()
+        .unwrap();
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn lists_tree() {
+        let examples: Vec<_> = [
+            "- base",
+            "- one
+             -- two",
+            "- one
+             -- two
+                with content
+             -- two (2)
+             --- three
+             - one",
+            "-- two
+             - one",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse_tree(&str))
+        .try_collect()
+        .unwrap();
         assert_yaml_snapshot!(examples);
     }
 
@@ -374,6 +467,49 @@ mod tests {
         .try_collect()
         .unwrap();
 
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn carryover_tags_tree() {
+        let examples: Vec<_> = [
+            "
+            #id 123
+            * tree
+            ** nested
+            ",
+            "
+            * tree
+            #id there
+            ** nested
+               ---
+             part of tree
+            ",
+            "
+            #name main
+            -- two
+            ---- four
+            #id 3
+            --- three
+            ",
+            "
+            #comment
+            multi-line
+            comments
+            ---
+            out
+            ",
+            "
+            #id 123
+            #comment
+            comment with id
+            ",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse_tree(&str))
+        .try_collect()
+        .unwrap();
         assert_yaml_snapshot!(examples);
     }
 
