@@ -44,7 +44,7 @@ impl From<NorgToken> for String {
 }
 
 /// A list of characters which are considered "special", i.e. for parsing of attached modifiers.
-const SPECIAL_CHARS: &str = "*-~/_!%^,\"'$:@|=.#+<>()[]{}\\";
+const SPECIAL_CHARS: &str = "*-~/_!%^,\"'`$:@|=.#+<>()[]{}\\";
 
 /// Parses a `.norg` document and breaks it up into tokens.
 pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
