@@ -1,0 +1,25 @@
+---
+source: src/metadata/mod.rs
+expression: examples
+---
+- Object:
+    key:
+      Str: value
+- Object:
+    x:
+      Str: y
+- Object:
+    x:
+      Num: 5
+- Object:
+    x:
+      Num: -4
+- Object:
+    x:
+      Str: "-4b"
+- Object:
+    arr:
+      Array:
+        - Str: is this okay?
+    huh:
+      Str: string

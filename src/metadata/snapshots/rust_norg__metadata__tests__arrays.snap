@@ -1,0 +1,20 @@
+---
+source: src/metadata/mod.rs
+expression: examples
+---
+- Object:
+    empty_arr:
+      Array: []
+- Object:
+    categories:
+      Array:
+        - Str: one
+        - Str: two
+        - Num: 45
+- Object:
+    arr:
+      Array:
+        - Str: arrays can contain a ton of shit
+        - Num: 5
+        - Num: -5
+        - Num: 6020000000000000000000000000

@@ -57,7 +57,7 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
                 Some(ParagraphSegmentToken::Text(result))
             }
             None => None,
-            x => {
+            _x => {
                 unreachable!();
             }
         })

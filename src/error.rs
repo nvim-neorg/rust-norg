@@ -9,6 +9,7 @@ pub enum NorgParseError {
     Stage2(Vec<Simple<NorgToken>>),
     Stage3(Vec<Simple<NorgBlock>>),
     Stage4(Vec<Simple<NorgASTFlat>>),
+    Meta(Simple<char>),
 }
 
 impl From<Vec<Simple<char>>> for NorgParseError {
@@ -32,5 +33,11 @@ impl From<Vec<Simple<NorgBlock>>> for NorgParseError {
 impl From<Vec<Simple<NorgASTFlat>>> for NorgParseError {
     fn from(error: Vec<Simple<NorgASTFlat>>) -> Self {
         NorgParseError::Stage4(error)
+    }
+}
+
+impl From<Simple<char>> for NorgParseError {
+    fn from(error: Simple<char>) -> Self {
+        NorgParseError::Meta(error)
     }
 }
