@@ -78,7 +78,12 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
                     Ok(s.to_string())
                 }
             })
-            .labelled("string");
+            .map(|s| match &s[..] {
+                "true" => NorgMeta::Bool(true),
+                "false" => NorgMeta::Bool(false),
+                "nil" => NorgMeta::Nil,
+                _ => NorgMeta::Str(s),
+            });
 
         let key = none_of(SPECIAL)
             .repeated()
@@ -96,6 +101,11 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
             .delimited_by(just('[').padded(), just(']').ignored())
             .map(NorgMeta::Array)
             .labelled("array");
+
+        let empty_array = empty()
+            .padded()
+            .delimited_by(just('['), just(']'))
+            .to(NorgMeta::Array(vec![]));
 
         let property = key
             .clone()
@@ -115,14 +125,12 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
             .labelled("object");
 
         choice((
-            just("nil").to(NorgMeta::Nil).labelled("nil"),
-            just("true").to(NorgMeta::Bool(true)).labelled("true"),
-            just("false").to(NorgMeta::Bool(false)).labelled("false"),
             number.map(NorgMeta::Num),
             key.then_ignore(just('\n')).map(NorgMeta::EmptyKey),
+            empty_array,
             array,
             object,
-            string.map(NorgMeta::Str),
+            string,
         ))
         .recover_with(nested_delimiters('{', '}', [('[', ']')], |_| {
             NorgMeta::Invalid

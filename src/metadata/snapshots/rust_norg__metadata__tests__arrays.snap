@@ -18,3 +18,10 @@ expression: examples
         - Num: 5
         - Num: -5
         - Num: 6020000000000000000000000000
+        - Nil
+        - Object:
+            a:
+              Array:
+                - Str: b
+            x:
+              Str: y

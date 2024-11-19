@@ -1,19 +1,9 @@
-key: value
-obj: {
-  x: y
-  a: [
-    b: c
-  ]
+x: {
+
+  v: hi
+
+  x:
+  hi: there
 }
-arr: [
-  x
-  {
-    k: v
-  }
-]
-h: i
-a: 1
-b: 7
-x: 2024-10-15:1000:15:10.000
-y:
-z:
+a: []
+hi: there

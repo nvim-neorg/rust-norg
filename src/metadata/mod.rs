@@ -77,6 +77,18 @@ mod tests {
               5
               -5
               6.02e27
+              nil
+              {
+                x: y
+                a: [
+                  b
+                ]
+              }
+              []
+              [
+                hi
+                hi
+              ]
             ]",
         ]
         .into_iter()
