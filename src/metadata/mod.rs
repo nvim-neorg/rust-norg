@@ -64,7 +64,10 @@ mod tests {
     #[test]
     fn arrays() {
         let examples: Vec<_> = [
-            "empty_arr: []",
+            "empty_arr: []
+             arr: [
+
+             ]",
             "
             categories: [
               one
@@ -73,7 +76,7 @@ mod tests {
             ]",
             "
             arr: [
-              arrays can contain a ton of shit
+              arrays can contain everything
               5
               -5
               6.02e27
@@ -101,19 +104,26 @@ mod tests {
     }
 
     #[test]
-    fn keys() {
+    fn keys_and_values() {
         let examples: Vec<_> = [
             "key: value",
             "x:y",
+            "x :y",
             "x:5",
             "x:-4",
-            "x:-4b",
+            "str:-4b",
+            "nil:nil",
+            "nil:",
+            "still_nil:
+             x: y",
             "
-            arr: [
-                is this okay?
-            ]
-            huh: string
+            key: value with : in it
+            key_2: value with: in it
             ",
+            "keys: {
+              in:
+              objects: []
+            }"
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

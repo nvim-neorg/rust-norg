@@ -88,7 +88,7 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
         let key = none_of(SPECIAL)
             .repeated()
             .at_least(1)
-            .then_ignore(just(':').padded())
+            .then_ignore(just(':').then(one_of(" \t").repeated()))
             .collect::<String>()
             .map(|s| s.trim().to_string())
             .labelled("key");
@@ -104,12 +104,11 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
 
         let empty_array = empty()
             .padded()
-            .delimited_by(just('['), just(']'))
+            .delimited_by(just('[').padded(), just(']'))
             .to(NorgMeta::Array(vec![]));
 
         let property = key
-            .clone()
-            .then_ignore(one_of(" \n\t").or_not())
+            .then_ignore(one_of(" \t").repeated())
             .then(value.or(empty().to(NorgMeta::Nil)))
             .then_ignore(just('\n').or_not())
             .labelled("property");
@@ -126,7 +125,6 @@ pub fn meta_parser() -> impl Parser<char, NorgMeta, Error = Simple<char>> {
 
         choice((
             number.map(NorgMeta::Num),
-            key.then_ignore(just('\n')).map(NorgMeta::EmptyKey),
             empty_array,
             array,
             object,

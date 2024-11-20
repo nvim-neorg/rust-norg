@@ -10,6 +10,9 @@ expression: examples
       Str: y
 - Object:
     x:
+      Str: y
+- Object:
+    x:
       Num: 5
 - Object:
     x:

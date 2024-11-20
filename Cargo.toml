@@ -4,10 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chrono = { version = "0.4.38", features = ["serde"] }
 chumsky = "0.9.3"
 itertools = "0.13.0"
-ordered-float = { version = "4.5.0", features = ["serde"] }
 serde = { version = "1.0.203", features = ["derive"] }
 unicode_categories = "0.1.1"
 
