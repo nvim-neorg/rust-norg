@@ -31,3 +31,10 @@ expression: examples
         - Array:
             - Str: hi
             - Str: hi
+- Object:
+    a2:
+      Array: []
+    arr:
+      Array: []
+    x:
+      Str: y
