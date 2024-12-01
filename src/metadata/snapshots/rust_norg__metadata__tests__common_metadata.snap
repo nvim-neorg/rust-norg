@@ -1,0 +1,45 @@
+---
+source: src/metadata/mod.rs
+expression: examples
+---
+- Object:
+    authors:
+      Str: benlubas
+    categories:
+      Str: journal
+    created:
+      Str: 2024-11-18
+    description:
+      Str: We Cooked
+    title:
+      Str: "Sunday November 17, 2024"
+    updated:
+      Str: "2024-11-18T17:58:21-0500"
+    version:
+      Str: 1.1.1
+- Object:
+    authors:
+      Str: benlubas
+    categories:
+      Array:
+        - Str: neorg
+        - Str: nvim
+        - Str: config
+    created:
+      Str: "2024-05-03T13:36:42-0500"
+    description:
+      Str: Extra lua code to configure Neorg
+    tangle:
+      Object:
+        delimiter:
+          Str: heading
+        languages:
+          Object:
+            lua:
+              Str: ~/github/.dotfiles/nvim/lua/benlubas/neorg/extras.lua
+    title:
+      Str: Neorg Extras
+    updated:
+      Str: "2024-10-27T11:12:32-0500"
+    version:
+      Str: 1.1.1

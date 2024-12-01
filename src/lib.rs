@@ -10,6 +10,7 @@ pub use crate::stage_3::*;
 pub use crate::stage_4::NorgAST;
 
 mod error;
+pub mod metadata;
 mod stage_1;
 mod stage_2;
 mod stage_3;
@@ -101,11 +102,11 @@ mod tests {
             * Back to regular heading
             ",
         ]
-            .into_iter()
-            .map(|example| example.to_string() + "\n")
-            .map(|str| parse_tree(&str))
-            .try_collect()
-            .unwrap();
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse_tree(&str))
+        .try_collect()
+        .unwrap();
         assert_yaml_snapshot!(headings_tree_examples);
     }
 

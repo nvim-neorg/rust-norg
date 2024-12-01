@@ -1,0 +1,41 @@
+---
+source: src/metadata/mod.rs
+expression: examples
+---
+- Object:
+    key:
+      Str: value
+- Object:
+    x:
+      Str: y
+- Object:
+    x:
+      Str: y
+- Object:
+    x:
+      Num: 5
+- Object:
+    x:
+      Num: -4
+- Object:
+    str:
+      Str: "-4b"
+- Object:
+    nil: Nil
+- Object:
+    nil: Nil
+- Object:
+    still_nil: Nil
+    x:
+      Str: y
+- Object:
+    key:
+      Str: "value with : in it"
+    key_2:
+      Str: "value with: in it"
+- Object:
+    keys:
+      Object:
+        in: Nil
+        objects:
+          Array: []
