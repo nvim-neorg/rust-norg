@@ -7,7 +7,9 @@ pub mod stage_1;
 
 /// Parses the given input string to produce an AST for the metadata
 pub fn parse_metadata(input: &str) -> Result<NorgMeta, NorgParseError> {
-    let processed = format!("{{\n{}\n}}\n", input.trim());
+    // don't ask me why this fixes it. I don't even care
+    let processed = input.replace("\n]", "\n ]");
+    let processed = format!("{{\n{}\n}}\n", processed.trim());
     Ok(stage_1::meta_parser().parse(processed)?)
 }
 
@@ -91,7 +93,7 @@ mod tests {
                 hi
               ]
             ]",
-            "arr:[]\na2:[\n]x: y",
+            "arr:[]\na2:[\n]\na3:[\nhi\n]\nx: y",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
