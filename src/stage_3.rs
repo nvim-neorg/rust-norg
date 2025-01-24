@@ -575,7 +575,7 @@ fn detached_modifier_extensions() -> impl Parser<
     let detached_modifier_extension = detached_modifier_extension_tokens
         .then(
             just(Whitespace)
-                .ignore_then(select!(Special('|') => Special('|')).repeated())
+                .ignore_then(select!(Special('|') => Special('|')).not().repeated())
                 .or_not()
                 .map(|tokens| {
                     if let Some(tokens) = tokens {

@@ -1,0 +1,134 @@
+---
+source: src/lib.rs
+expression: examples
+---
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions:
+        - Todo: Undone
+      content:
+        Paragraph:
+          - Token:
+              Text: undone
+- - Heading:
+      level: 1
+      title:
+        - Token: Whitespace
+        - Token:
+            Text: done
+      extensions:
+        - Todo: Done
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions:
+        - Todo: Paused
+      content:
+        Paragraph:
+          - Token:
+              Text: hold
+- - Heading:
+      level: 1
+      title:
+        - Token: Whitespace
+        - Token:
+            Text: canceled
+      extensions:
+        - Todo: Canceled
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions:
+        - Todo: Pending
+      content:
+        Paragraph:
+          - Token:
+              Text: pending
+- - Heading:
+      level: 1
+      title:
+        - Token: Whitespace
+        - Token:
+            Text: urgent
+      extensions:
+        - Todo: Urgent
+- - NestableDetachedModifier:
+      modifier_type: UnorderedList
+      level: 1
+      extensions:
+        - Todo:
+            Recurring: ~
+      content:
+        Paragraph:
+          - Token:
+              Text: recurring
+- - NestableDetachedModifier:
+      modifier_type: OrderedList
+      level: 1
+      extensions:
+        - Todo:
+            Recurring: Friday
+      content:
+        Paragraph:
+          - Token:
+              Text: recurring
+          - Token: Whitespace
+          - Token:
+              Text: with
+          - Token: Whitespace
+          - Token:
+              Text: date
+- - Heading:
+      level: 2
+      title:
+        - Token: Whitespace
+        - Token:
+            Text: undone
+        - Token:
+            Special: ","
+        - Token: Whitespace
+        - Token:
+            Text: low
+        - Token:
+            Special: ","
+        - Token: Whitespace
+        - Token:
+            Text: "&"
+        - Token: Whitespace
+        - Token:
+            Text: before
+        - Token: Whitespace
+        - Token:
+            Text: Feb
+      extensions:
+        - Todo: Undone
+        - Priority: Low
+        - DueDate: Feb 1
+- - Heading:
+      level: 2
+      title:
+        - Token: Whitespace
+        - Token:
+            Text: All
+        - Token: Whitespace
+        - Token:
+            Text: of
+        - Token: Whitespace
+        - Token:
+            Text: them
+      extensions:
+        - Priority: Two Words
+        - Todo: Done
+        - Todo: Undone
+        - Todo: Urgent
+        - Todo:
+            Recurring: ~
+        - Todo: Canceled
+        - Todo:
+            Recurring: 5th
+        - Todo: Paused
+        - Todo: Pending
+        - DueDate: Feb 1
+        - StartDate: "2025"
+        - Timestamp: Jan 1 2025

@@ -199,6 +199,28 @@ mod tests {
     }
 
     #[test]
+    fn modifier_extensions() {
+        let examples: Vec<_> = [
+            "- ( ) undone",
+            "* (x) done",
+            "- (=) hold",
+            "* (_) canceled",
+            "- (-) pending",
+            "* (!) urgent",
+            "- (+) recurring",
+            "~ (+ Friday) recurring with date",
+            "** ( |# Low|< Feb 1) undone, low, & before Feb",
+            "** (# Two Words|x| |!|+|_|+ 5th|=|-|< Feb 1|> 2025|@ Jan 1 2025) All of them"
+        ].into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
     fn lists_regressions() {
         [
             "- - a list item",
