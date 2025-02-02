@@ -69,15 +69,18 @@ expression: examples
               - Token:
                   Text: two
           content:
-            - NestableDetachedModifier:
+            - List:
                 modifier_type: UnorderedList
-                level: 4
-                extensions: []
-                text:
-                  Paragraph:
-                    - Token:
-                        Text: four
-                content: []
+                items:
+                  - NestableDetachedModifier:
+                      modifier_type: UnorderedList
+                      level: 4
+                      extensions: []
+                      text:
+                        Paragraph:
+                          - Token:
+                              Text: four
+                      content: []
             - CarryoverTag:
                 tag_type: Macro
                 name:

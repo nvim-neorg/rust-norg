@@ -7,7 +7,7 @@ use textwrap::dedent;
 
 use crate::stage_2::{NorgBlock, ParagraphSegmentToken, ParagraphTokenList};
 
-#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum NestableDetachedModifier {
     Quote,
     UnorderedList,
