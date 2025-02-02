@@ -46,15 +46,18 @@ expression: examples
         - Paragraph:
             - Token:
                 Text: two
-- - NestableDetachedModifier:
+- - List:
       modifier_type: UnorderedList
-      level: 1
-      extensions: []
-      text:
-        Paragraph:
-          - Token:
-              Text: list
-      content: []
+      items:
+        - NestableDetachedModifier:
+            modifier_type: UnorderedList
+            level: 1
+            extensions: []
+            text:
+              Paragraph:
+                - Token:
+                    Text: list
+            content: []
   - DelimitingModifier: HorizontalRule
   - Paragraph:
       - Token:
