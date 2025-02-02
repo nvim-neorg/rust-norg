@@ -55,7 +55,8 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
                 result.insert(0, c);
 
                 Some(ParagraphSegmentToken::Text(result))
-            }
+            },
+            Some(NorgToken::End(x)) => Some(ParagraphSegmentToken::Text(format!("{x}end"))),
             None => None,
             _x => {
                 unreachable!();
