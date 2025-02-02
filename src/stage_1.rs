@@ -29,7 +29,7 @@ impl std::fmt::Display for NorgToken {
             Self::End(c) => write!(f, "{}end", c),
             Self::Eof => f.write_char('\0'),
             Self::Escape(c) => write!(f, "\\{}", c),
-            Self::Newlines(count) => f.write_str(&" ".repeat(*count as usize)),
+            Self::Newlines(count) => f.write_str(&"\n".repeat(*count as usize)),
             Self::Regular(c) | Self::Special(c) => f.write_char(*c),
             Self::SingleNewline => f.write_char('\n'),
             Self::Whitespace(count) => f.write_str(&" ".repeat(*count as usize)),
@@ -61,13 +61,11 @@ pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Si
     });
 
     let newline = parse_newline
-        .then_ignore(ws.repeated())
         .to(NorgToken::SingleNewline);
 
     let newlines = parse_newline
         .repeated()
         .at_least(2)
-        .then_ignore(ws.repeated())
         .map(|content| NorgToken::Newlines(content.len() as u16));
 
     let special = one_of(SPECIAL_CHARS).map(NorgToken::Special);
