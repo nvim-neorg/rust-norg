@@ -111,7 +111,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
 > {
     let token = any().map(ParagraphSegment::Token);
     let modifier = select! {
-        ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-')) => c,
+        ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-' | '!' | '^' | ',')) => c,
     };
 
     let whitespace_or_special = select! {
@@ -286,7 +286,7 @@ fn paragraph_parser_closer_candidates(
 
     let token = any();
     let modifier = select! {
-        Token(ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-'))) => c,
+        Token(ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-' | '!' | '^' | ','))) => c,
     };
 
     let whitespace_or_special = select! {
@@ -580,10 +580,7 @@ fn detached_modifier_extensions() -> impl Parser<
                 .or_not()
                 .map(|tokens| {
                     if let Some(tokens) = tokens {
-                        tokens
-                            .into_iter()
-                            .map_into::<String>()
-                            .collect()
+                        tokens.into_iter().map_into::<String>().collect()
                     } else {
                         String::from("")
                     }
