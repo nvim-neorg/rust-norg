@@ -46,6 +46,9 @@ impl From<NorgToken> for String {
 /// A list of characters which are considered "special", i.e. for parsing of attached modifiers.
 const SPECIAL_CHARS: &str = "*-~/_!%^,\"'`$:@|=.#+<>()[]{}\\";
 
+/// List of chars that proceed "end" tags
+const TAG_CHARS: &str = "|@=";
+
 /// Parses a `.norg` document and breaks it up into tokens.
 pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
     let ws = filter(|c: &char| c.is_inline_whitespace() || c.is_separator_space())
@@ -72,7 +75,7 @@ pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Si
 
     let escape = just('\\').ignore_then(any()).map(NorgToken::Escape);
 
-    let tag_end = one_of(SPECIAL_CHARS)
+    let tag_end = one_of(TAG_CHARS)
         .then_ignore(keyword("end"))
         .then_ignore(choice((one_of("\n\r").rewind().map(|_| ()), end())))
         .map(NorgToken::End);
