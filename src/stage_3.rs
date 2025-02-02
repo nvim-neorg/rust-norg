@@ -3,6 +3,7 @@ use std::fmt::Write;
 use chumsky::prelude::*;
 use itertools::Itertools;
 use serde::Serialize;
+use textwrap::dedent;
 
 use crate::stage_2::{NorgBlock, ParagraphSegmentToken, ParagraphTokenList};
 
@@ -141,7 +142,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 .at_least(1),
         )
         .then_ignore(just(ParagraphSegmentToken::Special('`')))
-        .map(|content| ParagraphSegment::InlineVerbatim(content));
+        .map(ParagraphSegment::InlineVerbatim);
 
     let anchor = just(ParagraphSegmentToken::Special('['))
         .ignore_then(
@@ -717,7 +718,7 @@ pub fn stage_3(
                 NorgASTFlat::VerbatimRangedTag {
                     name: stringify_tokens_and_split(name),
                     parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
-                    content: content.into_iter().map_into::<String>().collect(),
+                    content: dedent(content.into_iter().map_into::<String>().collect::<String>().as_str()),
                 }
             },
         };

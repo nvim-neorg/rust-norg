@@ -23,4 +23,4 @@ expression: examples
         - first-parameter
         - "#&*(&$!)"
         - third-parameter
-      content: "function hello()\nprint(\"Hello World\")\nend  hello()\n"
+      content: "function hello()\n    print(\"Hello World\")\nend\n\nhello()\n"
