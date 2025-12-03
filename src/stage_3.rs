@@ -510,9 +510,9 @@ fn parse_paragraph(
         paragraph_rollup_candidates()
             .parse(unravel_candidates(
                 paragraph_parser_closer_candidates()
-                    .parse(unravel_candidates(dedup_opener_candidates(
+                    .parse(unravel_candidates(
                         paragraph_parser_opener_candidates_and_links().parse(input)?,
-                    )))
+                    ))
                     .unwrap(),
             ))
             .unwrap(),
