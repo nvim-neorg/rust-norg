@@ -31,9 +31,7 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 }
 
 pub fn parse_tree(input: &str) -> Result<Vec<NorgAST>, NorgParseError> {
-    Ok(stage_4(
-        stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?,
-    ))
+    Ok(stage_4(parse(input)?))
 }
 
 #[cfg(test)]
