@@ -4,7 +4,7 @@ use test_log::test;
 use tracing::info;
 
 // test and description pair
-const ANCHOR_TESTS: [(&str, &str, &str); 15] = [
+const ANCHOR_TESTS: [(&str, &str, &str); 16] = [
     (
         "anchor_declaration_basic",
         "Basic Anchor Declaration Tests",
@@ -72,6 +72,11 @@ const ANCHOR_TESTS: [(&str, &str, &str); 15] = [
         r#"This is *[important anchor]* text.
 
 [important anchor]{# important-section}"#,
+    ),
+    (
+        "anchor_within_attached_modifiers",
+        "nested anchor inside bold para with non anchor text",
+        r#"This *is [important anchor] text* "#,
     ),
     (
         "anchor_backward_reference",

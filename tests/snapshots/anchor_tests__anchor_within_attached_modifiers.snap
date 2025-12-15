@@ -1,0 +1,28 @@
+---
+source: tests/anchor_tests.rs
+description: nested anchor inside bold para with non anchor text
+info: "This *is [important anchor] text* "
+---
+[
+  Paragraph([
+    Token(Text("This")),
+    Token(Whitespace),
+    AttachedModifier(
+      modifier_type: '*',
+      content: [
+        Token(Text("is")),
+        Token(Whitespace),
+        Anchor(
+          content: [
+            Token(Text("important")),
+            Token(Whitespace),
+            Token(Text("anchor")),
+          ],
+          description: None,
+        ),
+        Token(Whitespace),
+        Token(Text("text")),
+      ],
+    ),
+  ]),
+]
