@@ -12,12 +12,13 @@ info: "This is *[important anchor]* text.\n\n[important anchor]{# important-sect
     AttachedModifier(
       modifier_type: '*',
       content: [
-        Anchor (
+        Anchor(
           content: [
             Token(Text("important")),
             Token(Whitespace),
             Token(Text("anchor")),
           ],
+          description: None,
         ),
       ],
     ),
