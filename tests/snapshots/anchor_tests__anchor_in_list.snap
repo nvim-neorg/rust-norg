@@ -1,0 +1,73 @@
+---
+source: tests/anchor_tests.rs
+description: Should work within list items
+info: "- First item with [list anchor]\n- Second item\n- Third item [list anchor]{* Target Section}"
+---
+[
+  NestableDetachedModifier(
+    modifier_type: UnorderedList,
+    level: 1,
+    extensions: [],
+    text: Paragraph([
+      Token(Text("First")),
+      Token(Whitespace),
+      Token(Text("item")),
+      Token(Whitespace),
+      Token(Text("with")),
+      Token(Whitespace),
+      Anchor(
+        content: [
+          Token(Text("list")),
+          Token(Whitespace),
+          Token(Text("anchor")),
+        ],
+        description: None,
+      ),
+    ]),
+    content: [],
+  ),
+  NestableDetachedModifier(
+    modifier_type: UnorderedList,
+    level: 1,
+    extensions: [],
+    text: Paragraph([
+      Token(Text("Second")),
+      Token(Whitespace),
+      Token(Text("item")),
+    ]),
+    content: [],
+  ),
+  NestableDetachedModifier(
+    modifier_type: UnorderedList,
+    level: 1,
+    extensions: [],
+    text: Paragraph([
+      Token(Text("Third")),
+      Token(Whitespace),
+      Token(Text("item")),
+      Token(Whitespace),
+      AnchorDefinition(
+        content: [
+          Token(Text("list")),
+          Token(Whitespace),
+          Token(Text("anchor")),
+        ],
+        target: Link(
+          filepath: None,
+          targets: [
+            Heading(
+              level: 1,
+              title: [
+                Token(Text("Target")),
+                Token(Whitespace),
+                Token(Text("Section")),
+              ],
+            ),
+          ],
+          description: None,
+        ),
+      ),
+    ]),
+    content: [],
+  ),
+]

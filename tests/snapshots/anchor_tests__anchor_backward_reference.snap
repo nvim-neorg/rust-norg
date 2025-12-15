@@ -1,0 +1,47 @@
+---
+source: tests/anchor_tests.rs
+description: Should handle backward references
+info: "[early anchor]{* Early Section}\n\nLater reference to [early anchor]."
+---
+[
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("early")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Heading(
+            level: 1,
+            title: [
+              Token(Text("Early")),
+              Token(Whitespace),
+              Token(Text("Section")),
+            ],
+          ),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+  Paragraph([
+    Token(Text("Later")),
+    Token(Whitespace),
+    Token(Text("reference")),
+    Token(Whitespace),
+    Token(Text("to")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("early")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+      ],
+      description: None,
+    ),
+    Token(Special('.')),
+  ]),
+]

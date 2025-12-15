@@ -1,0 +1,55 @@
+---
+source: tests/anchor_tests.rs
+description: Should handle multi-word anchor names
+info: "Link to [multi word anchor name] reference.\n\n[multi word anchor name]{* Target Section}"
+---
+[
+  Paragraph([
+    Token(Text("Link")),
+    Token(Whitespace),
+    Token(Text("to")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("multi")),
+        Token(Whitespace),
+        Token(Text("word")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+        Token(Whitespace),
+        Token(Text("name")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("reference")),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("multi")),
+        Token(Whitespace),
+        Token(Text("word")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+        Token(Whitespace),
+        Token(Text("name")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Heading(
+            level: 1,
+            title: [
+              Token(Text("Target")),
+              Token(Whitespace),
+              Token(Text("Section")),
+            ],
+          ),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

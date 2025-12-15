@@ -124,7 +124,7 @@ mod tests {
             "keys: {
               in:
               objects: []
-            }"
+            }",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

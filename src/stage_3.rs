@@ -111,7 +111,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
 > {
     let token = any().map(ParagraphSegment::Token);
     let modifier = select! {
-        ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-')) => c,
+        ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-' )) => c,
     };
 
     let whitespace_or_special = select! {
@@ -119,20 +119,11 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
         s @ ParagraphSegmentToken::Special(_) => s,
     };
 
-    let opening_modifier_candidate = whitespace_or_special
-        .then(modifier.repeated().at_least(1))
-        .then(just(ParagraphSegmentToken::Whitespace).not())
-        .map(|((left, modifiers), right)| {
-            ParagraphSegment::AttachedModifierOpener((Some(left), modifiers, right))
-        });
-
     let left_empty_opening_modifier = modifier
         .repeated()
         .at_least(1)
-        .then(just(ParagraphSegmentToken::Whitespace).not())
-        .map(|(modifiers, right)| {
-            ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
-        });
+        .then(just(ParagraphSegmentToken::Whitespace).not().rewind())
+        .map(|(modifiers, _)| ParagraphSegment::AttachedModifierOpener((None, modifiers)));
 
     let inline_verbatim = just(ParagraphSegmentToken::Special('`'))
         .ignore_then(
@@ -177,6 +168,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 just(ParagraphSegmentToken::Special('=')).to("=".to_string()),
                 just(ParagraphSegmentToken::Special('?')).to("?".to_string()),
                 just(ParagraphSegmentToken::Special('@')).to("@".to_string()),
+                just(ParagraphSegmentToken::Special('#')).to("#".to_string()),
             ))
             .then_ignore(
                 just(ParagraphSegmentToken::Whitespace)
@@ -206,6 +198,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                             "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
                             "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
                             "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
+                            "#" => LinkTarget::Generic(parse_paragraph(content).unwrap()),
                             "/" => {
                                 LinkTarget::Path(content.into_iter().map_into::<String>().collect())
                             }
@@ -220,7 +213,13 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                             },
                         }
                     } else {
-                        LinkTarget::Url(content.into_iter().map_into::<String>().collect())
+                        let content_str: String =
+                            content.into_iter().map_into::<String>().collect();
+                        if let Ok(line_number) = content_str.trim().parse::<usize>() {
+                            LinkTarget::LineNumber(line_number)
+                        } else {
+                            LinkTarget::Url(content_str)
+                        }
                     }]
                 } else {
                     vec![]
@@ -237,6 +236,13 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
         )
         .then_ignore(just(ParagraphSegmentToken::Special('>')))
         .map(|content| ParagraphSegment::InlineLinkTarget(parse_paragraph(content).unwrap()));
+
+    let opening_modifier_candidate = whitespace_or_special
+        .then(modifier.repeated().at_least(1))
+        .then(just(ParagraphSegmentToken::Whitespace).not().rewind())
+        .map(|((left, modifiers), _)| {
+            ParagraphSegment::AttachedModifierOpener((Some(left), modifiers))
+        });
 
     left_empty_opening_modifier.or_not().chain(
         choice((
@@ -263,20 +269,6 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
         .repeated()
         .at_least(1),
     )
-}
-
-fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
-    use ParagraphSegment::*;
-
-    input
-        .into_iter()
-        .coalesce(|prev, next| match (prev.clone(), next.clone()) {
-            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => {
-                Err((prev, AttachedModifierOpenerFail(data)))
-            }
-            _ => Err((prev, next)),
-        })
-        .collect()
 }
 
 fn paragraph_parser_closer_candidates(
@@ -333,7 +325,7 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
         .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
             match segment {
                 t @ Token(_) => acc.push(t),
-                AttachedModifierOpener((left, modifiers, right)) => {
+                AttachedModifierOpener((left, modifiers)) => {
                     if let Some(left) = left {
                         acc.push(Token(left));
                     }
@@ -344,7 +336,6 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                             closer: None,
                         }
                     }));
-                    acc.push(Token(right));
                 }
                 AttachedModifierCloserCandidate((left, modifiers, right)) => {
                     acc.push(*left);
@@ -354,7 +345,7 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                     }
                 }
                 AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
-                AttachedModifierOpenerFail((left, modifiers, right)) => {
+                AttachedModifierOpenerFail((left, modifiers)) => {
                     if let Some(left) = left {
                         acc.push(Token(left));
                     }
@@ -363,7 +354,6 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                             .into_iter()
                             .map(|c| Token(ParagraphSegmentToken::Special(c))),
                     );
-                    acc.push(Token(right));
                 }
                 others => acc.push(others),
             };
@@ -438,6 +428,7 @@ pub enum LinkTarget {
     Generic(Vec<ParagraphSegment>),
     Wiki(Vec<ParagraphSegment>),
     Extendable(Vec<ParagraphSegment>),
+    LineNumber(usize),
     Path(String),
     Url(String),
     Timestamp(String),
@@ -446,20 +437,8 @@ pub enum LinkTarget {
 #[derive(Debug, Clone, PartialEq, Serialize, Hash, Eq)]
 pub enum ParagraphSegment {
     Token(ParagraphSegmentToken),
-    AttachedModifierOpener(
-        (
-            Option<ParagraphSegmentToken>,
-            Vec<char>,
-            ParagraphSegmentToken,
-        ),
-    ),
-    AttachedModifierOpenerFail(
-        (
-            Option<ParagraphSegmentToken>,
-            Vec<char>,
-            ParagraphSegmentToken,
-        ),
-    ),
+    AttachedModifierOpener((Option<ParagraphSegmentToken>, Vec<char>)),
+    AttachedModifierOpenerFail((Option<ParagraphSegmentToken>, Vec<char>)),
     AttachedModifierCloserCandidate(
         (
             Box<ParagraphSegment>,
@@ -501,9 +480,9 @@ fn parse_paragraph(
         paragraph_rollup_candidates()
             .parse(unravel_candidates(
                 paragraph_parser_closer_candidates()
-                    .parse(unravel_candidates(dedup_opener_candidates(
+                    .parse(unravel_candidates(
                         paragraph_parser_opener_candidates_and_links().parse(input)?,
-                    )))
+                    ))
                     .unwrap(),
             ))
             .unwrap(),
@@ -580,10 +559,7 @@ fn detached_modifier_extensions() -> impl Parser<
                 .or_not()
                 .map(|tokens| {
                     if let Some(tokens) = tokens {
-                        tokens
-                            .into_iter()
-                            .map_into::<String>()
-                            .collect()
+                        tokens.into_iter().map_into::<String>().collect()
                     } else {
                         String::from("")
                     }

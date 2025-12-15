@@ -60,8 +60,7 @@ pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Si
         *c == '\n' || *c == '\r' || c.is_separator_line() || c.is_separator_paragraph()
     });
 
-    let newline = parse_newline
-        .to(NorgToken::SingleNewline);
+    let newline = parse_newline.to(NorgToken::SingleNewline);
 
     let newlines = parse_newline
         .repeated()

@@ -1,0 +1,41 @@
+---
+source: tests/anchor_tests.rs
+description: check ancho declaration with description
+info: "[anchor][custom description]. Here is [anchor]{# target-location}"
+---
+[
+  Paragraph([
+    Anchor(
+      content: [
+        Token(Text("anchor")),
+      ],
+      description: Some([
+        Token(Text("custom")),
+        Token(Whitespace),
+        Token(Text("description")),
+      ]),
+    ),
+    Token(Special('.')),
+    Token(Whitespace),
+    Token(Text("Here")),
+    Token(Whitespace),
+    Token(Text("is")),
+    Token(Whitespace),
+    AnchorDefinition(
+      content: [
+        Token(Text("anchor")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Generic([
+            Token(Text("target")),
+            Token(Special('-')),
+            Token(Text("location")),
+          ]),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

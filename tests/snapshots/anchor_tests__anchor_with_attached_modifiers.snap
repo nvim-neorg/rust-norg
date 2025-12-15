@@ -1,0 +1,49 @@
+---
+source: tests/anchor_tests.rs
+description: Should work within attached modifiers
+info: "This is *[important anchor]* text.\n\n[important anchor]{# important-section}"
+---
+[
+  Paragraph([
+    Token(Text("This")),
+    Token(Whitespace),
+    Token(Text("is")),
+    Token(Whitespace),
+    AttachedModifier(
+      modifier_type: '*',
+      content: [
+        Anchor(
+          content: [
+            Token(Text("important")),
+            Token(Whitespace),
+            Token(Text("anchor")),
+          ],
+          description: None,
+        ),
+      ],
+    ),
+    Token(Whitespace),
+    Token(Text("text")),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("important")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Generic([
+            Token(Text("important")),
+            Token(Special('-')),
+            Token(Text("section")),
+          ]),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

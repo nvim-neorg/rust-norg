@@ -260,52 +260,47 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                 name,
                 parameters,
                 next_object,
-            } => {
-                match *next_object.clone() {
-                    NorgASTFlat::Heading {
-                        level,
-                        title,
-                        extensions,
-                    } => {
-                        let content = consume_heading_content(&level, &flat, &mut i);
-                        ast.push(NorgAST::CarryoverTag {
-                            tag_type: tag_type.clone(),
-                            name: name.to_vec(),
-                            parameters: parameters.to_vec(),
-                            next_object: Box::new(NorgAST::Heading {
-                                level,
-                                title,
-                                extensions,
-                                content,
-                            }),
-                        })
-                    }
-                    NorgASTFlat::NestableDetachedModifier {
-                        modifier_type,
-                        level,
-                        extensions,
-                        content,
-                    } => {
-                        let new_content =
-                            consume_nestable_detached_mod_content(&level, &flat, &mut i);
-                        ast.push(NorgAST::CarryoverTag {
-                            tag_type: tag_type.clone(),
-                            name: name.to_vec(),
-                            parameters: parameters.to_vec(),
-                            next_object: Box::new(NorgAST::NestableDetachedModifier {
-                                modifier_type,
-                                level,
-                                extensions,
-                                text: content,
-                                content: new_content,
-                            }),
-                        })
-                    }
-                    _ => {
-                        ast.push(convert(item.clone()))
-                    }
+            } => match *next_object.clone() {
+                NorgASTFlat::Heading {
+                    level,
+                    title,
+                    extensions,
+                } => {
+                    let content = consume_heading_content(&level, &flat, &mut i);
+                    ast.push(NorgAST::CarryoverTag {
+                        tag_type: tag_type.clone(),
+                        name: name.to_vec(),
+                        parameters: parameters.to_vec(),
+                        next_object: Box::new(NorgAST::Heading {
+                            level,
+                            title,
+                            extensions,
+                            content,
+                        }),
+                    })
                 }
-            }
+                NorgASTFlat::NestableDetachedModifier {
+                    modifier_type,
+                    level,
+                    extensions,
+                    content,
+                } => {
+                    let new_content = consume_nestable_detached_mod_content(&level, &flat, &mut i);
+                    ast.push(NorgAST::CarryoverTag {
+                        tag_type: tag_type.clone(),
+                        name: name.to_vec(),
+                        parameters: parameters.to_vec(),
+                        next_object: Box::new(NorgAST::NestableDetachedModifier {
+                            modifier_type,
+                            level,
+                            extensions,
+                            text: content,
+                            content: new_content,
+                        }),
+                    })
+                }
+                _ => ast.push(convert(item.clone())),
+            },
             NorgASTFlat::NestableDetachedModifier {
                 level: start_level,
                 modifier_type,

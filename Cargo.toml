@@ -8,8 +8,10 @@ chumsky = "0.9.3"
 itertools = "0.13.0"
 serde = { version = "1.0.203", features = ["derive"] }
 textwrap = "0.16.1"
+tracing = "0.1.41"
 unicode_categories = "0.1.1"
 
 [dev-dependencies]
-insta = { version = "1.39.0", features = ["yaml"] }
+insta = { version = "1.39.0", features = ["ron", "yaml"] }
 proptest = "1.4.0"
+test-log = "0.2.18"

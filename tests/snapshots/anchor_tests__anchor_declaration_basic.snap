@@ -1,0 +1,39 @@
+---
+source: tests/anchor_tests.rs
+description: Basic Anchor Declaration Tests
+info: "[Neorg] is a fancy organizational tool.\n        [Neorg]{https://github.com/nvim-neorg/neorg}"
+---
+[
+  Paragraph([
+    Anchor(
+      content: [
+        Token(Text("Neorg")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("is")),
+    Token(Whitespace),
+    Token(Text("a")),
+    Token(Whitespace),
+    Token(Text("fancy")),
+    Token(Whitespace),
+    Token(Text("organizational")),
+    Token(Whitespace),
+    Token(Text("tool")),
+    Token(Special('.')),
+    Token(Whitespace),
+    AnchorDefinition(
+      content: [
+        Token(Text("Neorg")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://github.com/nvim-neorg/neorg"),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

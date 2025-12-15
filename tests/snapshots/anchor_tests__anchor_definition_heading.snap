@@ -1,0 +1,30 @@
+---
+source: tests/anchor_tests.rs
+description: Should link anchor to heading
+info: "[section reference]{* Important Section}"
+---
+[
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("section")),
+        Token(Whitespace),
+        Token(Text("reference")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Heading(
+            level: 1,
+            title: [
+              Token(Text("Important")),
+              Token(Whitespace),
+              Token(Text("Section")),
+            ],
+          ),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

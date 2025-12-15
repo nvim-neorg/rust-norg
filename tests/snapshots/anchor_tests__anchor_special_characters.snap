@@ -1,0 +1,52 @@
+---
+source: tests/anchor_tests.rs
+description: Special Characters and Edge Cases
+info: "Link with [special & chars!] in name.\n\n[special & chars!]{# special-target}"
+---
+[
+  Paragraph([
+    Token(Text("Link")),
+    Token(Whitespace),
+    Token(Text("with")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("special")),
+        Token(Whitespace),
+        Token(Text("&")),
+        Token(Whitespace),
+        Token(Text("chars")),
+        Token(Special('!')),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("in")),
+    Token(Whitespace),
+    Token(Text("name")),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("special")),
+        Token(Whitespace),
+        Token(Text("&")),
+        Token(Whitespace),
+        Token(Text("chars")),
+        Token(Special('!')),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Generic([
+            Token(Text("special")),
+            Token(Special('-')),
+            Token(Text("target")),
+          ]),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

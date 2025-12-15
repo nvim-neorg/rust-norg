@@ -1,0 +1,46 @@
+---
+source: tests/anchor_tests.rs
+description: Should generate current path URL mapping
+info: "Link to [local-ref] within document.\n\n[local-ref]{# local-reference}"
+---
+[
+  Paragraph([
+    Token(Text("Link")),
+    Token(Whitespace),
+    Token(Text("to")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("local")),
+        Token(Special('-')),
+        Token(Text("ref")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("within")),
+    Token(Whitespace),
+    Token(Text("document")),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("local")),
+        Token(Special('-')),
+        Token(Text("ref")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Generic([
+            Token(Text("local")),
+            Token(Special('-')),
+            Token(Text("reference")),
+          ]),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

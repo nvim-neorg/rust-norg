@@ -1,0 +1,51 @@
+---
+source: tests/anchor_tests.rs
+description: Should link both instances to the same target
+info: "First mention of [tool] and second mention of [tool].\n\n[tool]{https://tool.example.com}"
+---
+[
+  Paragraph([
+    Token(Text("First")),
+    Token(Whitespace),
+    Token(Text("mention")),
+    Token(Whitespace),
+    Token(Text("of")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("tool")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("and")),
+    Token(Whitespace),
+    Token(Text("second")),
+    Token(Whitespace),
+    Token(Text("mention")),
+    Token(Whitespace),
+    Token(Text("of")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("tool")),
+      ],
+      description: None,
+    ),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("tool")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://tool.example.com"),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

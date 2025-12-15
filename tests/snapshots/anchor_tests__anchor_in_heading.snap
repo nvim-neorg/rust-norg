@@ -1,0 +1,45 @@
+---
+source: tests/anchor_tests.rs
+description: Should work within headings
+info: "* Heading with [heading anchor] reference\n\n[heading anchor]{https://example.com}"
+---
+[
+  Heading(
+    level: 1,
+    title: [
+      Token(Text("Heading")),
+      Token(Whitespace),
+      Token(Text("with")),
+      Token(Whitespace),
+      Anchor(
+        content: [
+          Token(Text("heading")),
+          Token(Whitespace),
+          Token(Text("anchor")),
+        ],
+        description: None,
+      ),
+      Token(Whitespace),
+      Token(Text("reference")),
+    ],
+    extensions: [],
+    content: [
+      Paragraph([
+        AnchorDefinition(
+          content: [
+            Token(Text("heading")),
+            Token(Whitespace),
+            Token(Text("anchor")),
+          ],
+          target: Link(
+            filepath: None,
+            targets: [
+              Url("https://example.com"),
+            ],
+            description: None,
+          ),
+        ),
+      ]),
+    ],
+  ),
+]

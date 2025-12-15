@@ -1,0 +1,59 @@
+---
+source: tests/anchor_tests.rs
+description: Multiple Anchor Usage in a same line
+info: "Both [first] and [second] are useful resources.\n        [first]{https://first.example.com}\n        [second]{https://second.example.com}"
+---
+[
+  Paragraph([
+    Token(Text("Both")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("first")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("and")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("second")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("are")),
+    Token(Whitespace),
+    Token(Text("useful")),
+    Token(Whitespace),
+    Token(Text("resources")),
+    Token(Special('.')),
+    Token(Whitespace),
+    AnchorDefinition(
+      content: [
+        Token(Text("first")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://first.example.com"),
+        ],
+        description: None,
+      ),
+    ),
+    Token(Whitespace),
+    AnchorDefinition(
+      content: [
+        Token(Text("second")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://second.example.com"),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

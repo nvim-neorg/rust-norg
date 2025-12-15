@@ -1,0 +1,21 @@
+---
+source: tests/anchor_tests.rs
+description: Should link anchor to external URL
+info: "[homepage]{https://example.com}"
+---
+[
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("homepage")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://example.com"),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

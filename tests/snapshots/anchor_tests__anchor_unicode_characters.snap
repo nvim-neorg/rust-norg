@@ -1,0 +1,40 @@
+---
+source: tests/anchor_tests.rs
+description: Should handle unicode characters
+info: "Reference to [café anchor] here.\n\n[café anchor]{https://café.example.com}"
+---
+[
+  Paragraph([
+    Token(Text("Reference")),
+    Token(Whitespace),
+    Token(Text("to")),
+    Token(Whitespace),
+    Anchor(
+      content: [
+        Token(Text("café")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+      ],
+      description: None,
+    ),
+    Token(Whitespace),
+    Token(Text("here")),
+    Token(Special('.')),
+  ]),
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("café")),
+        Token(Whitespace),
+        Token(Text("anchor")),
+      ],
+      target: Link(
+        filepath: None,
+        targets: [
+          Url("https://café.example.com"),
+        ],
+        description: None,
+      ),
+    ),
+  ]),
+]

@@ -31,9 +31,7 @@ pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
 }
 
 pub fn parse_tree(input: &str) -> Result<Vec<NorgAST>, NorgParseError> {
-    Ok(stage_4(
-        stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?,
-    ))
+    Ok(stage_4(parse(input)?))
 }
 
 #[cfg(test)]
@@ -210,8 +208,9 @@ mod tests {
             "- (+) recurring",
             "~ (+ Friday) recurring with date",
             "** ( |# Low|< Feb 1) undone, low, & before Feb",
-            "** (# Two Words|x| |!|+|_|+ 5th|=|-|< Feb 1|> 2025|@ Jan 1 2025) All of them"
-        ].into_iter()
+            "** (# Two Words|x| |!|+|_|+ 5th|=|-|< Feb 1|> 2025|@ Jan 1 2025) All of them",
+        ]
+        .into_iter()
         .map(|example| example.to_string() + "\n")
         .map(|str| parse(&str))
         .try_collect()
@@ -709,6 +708,26 @@ mod tests {
     #[test]
     fn links() {
         let examples: Vec<_> = [
+            // expected to fail
+            // r#"{:path:/ file}"#,
+            // r#"{:path:@ timestamp}"#,
+            // r#"{:path:https://my-url}"#,
+            // r#"{$$ Text}"#,
+            // r#"{\n  * linkable}"#,
+            // r#"[linkable\n  ]"#,
+            // r#"<\n  this certainly isn't a linkable\n  >"#,
+            // r#"{*text}"#,
+            // r#"{:file:https://github.com}"#,
+            // r#"{:file:/ file.txt}"#,
+            // r#"{:file:@ Wednesday 30th Jan}"#,
+            // r#"{\n    * text}"#,
+            // r#"{\n        * text\n    }"#,
+            // r#"{* text\n    }"#,
+            // r#"{ * text}"#,
+            // r#"{* text}[\n        text\n    ]"#,
+            // r#"{* text}[text\n    ]"#,
+            // r#"{* text}[\n    text]"#,
+            // these are the correct links
             "{https://github.com/nvim-neorg/neorg}",
             "{$ hello!}",
             "{/ a-path.txt}",
@@ -721,6 +740,36 @@ mod tests {
             "This is a <link>!",
             "<*linkable with markup*> here!",
             "{:another_file:}",
+            r#"{:path/to/other-file:}"#,
+            r#"{:path/to/file:123}"#,
+            r#"{:$/path/from/root/file:123}"#,
+            r#"{: $workspace/path/from/root/file:123}"#,
+            r#"{:path/to/file:# Generic Location within that file}"#,
+            r#"{:path/to/file:** Level 2 heading}"#,
+            r#"{file://my/file.norg}"#,
+            // * Path Modifiers:
+            //   - /my/file - Root of the file system.
+            //   - ~/Documents/my-file - User's home directory.
+            //   - $/my/file - Root of the Neorg workspace.
+            //   - $notes/my/file - Links to a file from another workspace.
+            //   - Line Number:
+            r#"{2}"#,
+            r#"{:file:4}"#,
+            // - Detached Modifier:
+            r#"{* I am a level 1 heading}"#,
+            // - Custom Detached Modifiers:
+            r#"{# My Location}"#,
+            r#"{/ /path/to/my/file.txt}"#,
+            r#"{/ my-file.txt:123}"#,
+            r#"{@ 5th May}"#,
+            r#"{? mammals}"#,
+            r#"{= Neorg2022}(my_bibliography)"#,
+            // - Inline Linkables:
+            r#"{# Carryover Tags}"#,
+            r#"{# Inline Link Targets}"#,
+            // - Scoping:
+            r#"{* Heading Name : *** Level 3 heading}"#,
+            r#"{* heading1 : ** heading2 : ^ Footnote}"#,
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")

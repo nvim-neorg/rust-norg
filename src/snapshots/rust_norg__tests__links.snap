@@ -135,3 +135,245 @@ expression: examples
           filepath: another_file
           targets: []
           description: ~
+- - Paragraph:
+      - Link:
+          filepath: path/to/other-file
+          targets: []
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: path/to/file
+          targets:
+            - LineNumber: 123
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: $/path/from/root/file
+          targets:
+            - LineNumber: 123
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: " $workspace/path/from/root/file"
+          targets:
+            - LineNumber: 123
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: path/to/file
+          targets:
+            - Generic:
+                - Token:
+                    Text: Generic
+                - Token: Whitespace
+                - Token:
+                    Text: Location
+                - Token: Whitespace
+                - Token:
+                    Text: within
+                - Token: Whitespace
+                - Token:
+                    Text: that
+                - Token: Whitespace
+                - Token:
+                    Text: file
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: path/to/file
+          targets:
+            - Heading:
+                level: 2
+                title:
+                  - Token:
+                      Text: Level
+                  - Token: Whitespace
+                  - Token:
+                      Text: "2"
+                  - Token: Whitespace
+                  - Token:
+                      Text: heading
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Url: "file://my/file.norg"
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - LineNumber: 2
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: file
+          targets:
+            - LineNumber: 4
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Heading:
+                level: 1
+                title:
+                  - Token:
+                      Text: I
+                  - Token: Whitespace
+                  - Token:
+                      Text: am
+                  - Token: Whitespace
+                  - Token:
+                      Text: a
+                  - Token: Whitespace
+                  - Token:
+                      Text: level
+                  - Token: Whitespace
+                  - Token:
+                      Text: "1"
+                  - Token: Whitespace
+                  - Token:
+                      Text: heading
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Generic:
+                - Token:
+                    Text: My
+                - Token: Whitespace
+                - Token:
+                    Text: Location
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Path: /path/to/my/file.txt
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Path: "my-file.txt:123"
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Timestamp: 5th May
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Url: "? mammals"
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Extendable:
+                - Token:
+                    Text: Neorg2022
+          description: ~
+      - Token:
+          Special: (
+      - Token:
+          Text: my
+      - Token:
+          Special: _
+      - Token:
+          Text: bibliography
+      - Token:
+          Special: )
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Generic:
+                - Token:
+                    Text: Carryover
+                - Token: Whitespace
+                - Token:
+                    Text: Tags
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Generic:
+                - Token:
+                    Text: Inline
+                - Token: Whitespace
+                - Token:
+                    Text: Link
+                - Token: Whitespace
+                - Token:
+                    Text: Targets
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Heading:
+                level: 1
+                title:
+                  - Token:
+                      Text: Heading
+                  - Token: Whitespace
+                  - Token:
+                      Text: Name
+                  - Token: Whitespace
+                  - Token:
+                      Special: ":"
+                  - Token: Whitespace
+                  - Token:
+                      Special: "*"
+                  - Token:
+                      Special: "*"
+                  - Token:
+                      Special: "*"
+                  - Token: Whitespace
+                  - Token:
+                      Text: Level
+                  - Token: Whitespace
+                  - Token:
+                      Text: "3"
+                  - Token: Whitespace
+                  - Token:
+                      Text: heading
+          description: ~
+- - Paragraph:
+      - Link:
+          filepath: ~
+          targets:
+            - Heading:
+                level: 1
+                title:
+                  - Token:
+                      Text: heading1
+                  - Token: Whitespace
+                  - Token:
+                      Special: ":"
+                  - Token: Whitespace
+                  - Token:
+                      Special: "*"
+                  - Token:
+                      Special: "*"
+                  - Token: Whitespace
+                  - Token:
+                      Text: heading2
+                  - Token: Whitespace
+                  - Token:
+                      Special: ":"
+                  - Token: Whitespace
+                  - Token:
+                      Special: ^
+                  - Token: Whitespace
+                  - Token:
+                      Text: Footnote
+          description: ~

@@ -1,0 +1,19 @@
+---
+source: tests/anchor_tests.rs
+description: anchor definition file location
+info: "[documentation]{:docs/setup:}"
+---
+[
+  Paragraph([
+    AnchorDefinition(
+      content: [
+        Token(Text("documentation")),
+      ],
+      target: Link(
+        filepath: Some("docs/setup"),
+        targets: [],
+        description: None,
+      ),
+    ),
+  ]),
+]
