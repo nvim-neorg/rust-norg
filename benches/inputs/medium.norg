@@ -1,0 +1,1108 @@
+@document.meta
+title: Norg on the Web
+description: How to escape markdown and adopt norg for your blog
+authors: [
+  amartin
+]
+categories: [
+  neorg
+]
+created: 2025-07-15T08:02:56-04:00
+updated: 2025-07-24T16:51:07-0400
+draft: false
+layout: post
+truncate: 159
+version: 1.1.1
+@end
+
+It's been three years since I made a {https://amartin.codeberg.page/posts/using-neorg-in-hugo/}[post] about a workaround for using Norg in Hugo - /who would've
+thought/ I'd end up developing my own solution to the problem a few years later.
+
+While the solution no longer involves Hugo, I feel like it's much better now /and it has nothing to
+do with me being the maintainer of the solution, I promise!/
+
++html.class note
+> *Note*: If you want to skip the long introduction where I explain what led me to develop Norgolith
+and its early development alongside some technical explanations, and just want the sauce, {** Freeing from Markdown (Migration-to-Norgolith)}[click here].
+
+** Introduction
+   Before launching into a conference talk about why my tool is awesome and why you should use
+   it—like some salesman whose financial stability depends on you buying their product—let me
+   explain how this all started and why I didn't just adopt some alternative that wouldn't involve
+   reinventing the wheel /which I absolutely hate doing/.
+
+   Beyond reasons such as reinventing the wheel /which fascinates us as open-source developers/, I had
+   reasons to start hating using markdown with all my soul (which I will later explain in a rant
+   post), and thus began the search for alternatives to use it everywhere.
+
+   And so I found a solution, which although not (and still isn't) definitive and complete, was and
+   remains /promising/: {https://github.com/nvim-neorg/norg-specs}[norg]. As I explained in the aforementioned post, I found a way to use it so I
+   wouldn't have to write markdown myself, since the {https://github.com/nvim-neorg/neorg}[Neovim plugin] has a markdown exporter for
+   convenience. Simple—but it got the job done.
+
+*** The breaking point
+    Further down the road, I also noticed problems I had to solve myself between the conversion to
+    Markdown and my static site generator at the time, Hugo. Some of those problems - if not all -
+    required manual intervention to be solved, and each one was more tedious than the last.
+    Especially when I wanted nothing to do with editing after exporting my norg documents to
+    markdown. This frustrated me because it was impractical, and I had my blog on hiatus for just
+    over a year. That's when during that hiatus I realized I needed to start creating a better
+    solution for my problem.
+
+** Hello, Norgolith
+   +html.class warning
+   > *Warning*: please forgive me if you are using a mobile device to read this section, as several
+   of its sections contain technical flowcharts that may require zooming on small screens. There's
+   not much I can do about it. :(
+
+   +html.class border-none! mt-0!
+*** A tough beginning
+    I'll be honest, I started thinking about creating Norgolith during a period when I was still
+    burned out (thanks to those damn Agile development methodologies implemented in startups). I’m
+    a very methodical and by-the-book kind of guy when it comes to working on projects. I need to
+    know all the details in advance before I can get started: including the name (which I’m really
+    bad at, /lmao/) and, most importantly, which language I’ll use. At first I only had one thing
+    clear - I wanted it to be a self-contained binary, with options like Zig and (/unfortunately/)
+    Rust.
+
+    In the end, I don't know if it's just another one of those ironic twists, but for a long time
+    Rust was my most hated language (as any good C developer would) and yet it seemed like my best
+    option for developing my project thanks to its vast and mature ecosystem for everything - I
+    wouldn't have to waste time reinventing the wheel everywhere.
+
+    For a while I hesitated about whether to use Rust. I don't know why, but during burnout my most
+    hated language became my most loved one (excluding Elixir, which is the love of my life). I
+    understood web server theory but not how the hell to implement it (aka make my own web server),
+    so it was a tough start. Yet again, I knew the theory behind something but not how to actually
+    implement it, /how the turntables/.
+
+*** Lightbulb moments
+    Norgolith started as a simple HTTP server with {https://hyper.rs}[hyper] that spat out a hello world in the web
+    browser, while my mind raced a thousand times thinking about how to implement everything. Little
+    by little I broke down all the work into small functionality PRs, and the main one was simple to
+    establish in terms of priorities: parsing norg files.
+
+    At the time, a {https://github.com/nvim-neorg/rust-norg}[Rust parser for norg] was in active development (though already in a "usable"
+    state), which greatly lightened my workload in my mission to get rid of markdown. All the work
+    on Norgolith excited me tremendously and rekindled my love for writing code, but what I
+    initially enjoyed most was starting to write the converter using the AST generated by the parser
+    library.
+
+    The process of interpreting and converting the format is really fun to work on, since—unlike
+    parsers—I don’t have to worry about anything except interpreting an already-built AST and
+    breaking it down to generate strings. And that’s how the converter started:
+
+    @code rust
+    use rust_norg::{parse, ParagraphSegmentToken, NorgASTFlat};
+
+    trait NorgToHtml {
+      fn to_html(&self) -> String;
+    }
+
+    fn paragraph_to_string(segment: &[ParagraphSegmentToken]) -> String {
+      let mut paragraph: String = "".to_owned();
+      segment.iter().for_each(|node| match node {
+        ParagraphSegmentToken::Text(s) => paragraph.push_str(s),
+        ParagraphSegmentToken::Whitespace => paragraph.push(' '),
+        ParagraphSegmentToken::Escape(c) => paragraph.push_str(&c.to_string()),
+        ParagraphSegmentToken::Special(c) => paragraph.push_str(&c.to_string()),
+      });
+      paragraph
+    }
+
+    impl NorgToHtml for NorgASTFlat {
+      fn to_html(&self) -> String {
+        match self {
+          NorgASTFlat::Heading {level, title, ..} => {
+            let mut heading_tag: String = "<".to_owned();
+            match level {
+              1 => {
+                heading_tag.push_str("h1>")
+              },
+              _ => todo!()
+            }
+            let heading_title = paragraph_to_string(title);
+            heading_tag.push_str(&heading_title);
+            heading_tag.push_str("</h1>");
+            heading_tag
+          },
+          NorgASTFlat::Paragraph(s) => {
+            let mut paragraph_tag: String = "<p>".to_owned();
+            let paragraph = paragraph_to_string(s);
+            paragraph_tag.push_str(&paragraph);
+            paragraph_tag.push_str("</p>");
+            paragraph_tag
+          }
+          _ => todo!(),
+        }
+      }
+    }
+
+    fn norg_to_html(ast: &NorgASTFlat) -> String {
+      ast.to_html()
+    }
+
+    fn main() -> Result<()> {
+      let norg_code = "* Hello, World\n  This is a paragraph lol\n";
+      println!("Norg code:\n{}\nProduced HTML:", norg_code);
+      let ast = parse(norg_code).unwrap();
+      for node in ast {
+        let html = norg_to_html(&node);
+        println!("{}", html);
+      }
+      Ok(())
+    }
+    @end
+
+    Extremely simple, and yet it was the most fun I'd had in months! Of course, that wasn't enough
+    and it later evolved into something much bigger and more capable, but we'll save that for the
+    next section. Let's return to the other essential piece, the HTTP server.
+
+    The development server is the heart of Norgolith, and it's easily the most complex piece of code
+    within Norgolith (with just over 1100 lines of code written {https://github.com/NTBBloodbath/norgolith/blob/7fac3a2fda9261a6d6e4968ade51248024292616/src/cmd/dev.rs}[at the time of writing this]). And
+    this being the fundamental core of Norgolith, its development was full of mental gaps and pauses.
+    After all, putting that theory was complicated even after examining the code of several SSGs
+    like {https://github.com/getzola/zola}[Zola] and {https://github.com/cobalt-org/cobalt.rs}[Cobalt] to try understanding the implementation process. But eventually I slowly
+    made my way through the implementation! Though it ended up being even much larger than the SSGs
+    used as reference, /woops/.
+
+*** HTTP Server Architecture
+    Since flowcharts are better than words for covering technical aspects for us nerds, I'll use
+    them to explain how the server works in a way that mirrors the end-user experience.
+
+**** Server Initialization Sequence
+     Initializing the dev server is a precision operation: first we hunt down `norgolith.toml` to
+     identify whether we are in a Norgolith site directory (no guesswork, no defaults), then we load
+     templates and scan content in parallel. The best part? A reload broadcast channel that links
+     the WebSockets server, file watcher, and HTTP handlers before any ports open. Only when all
+     systems are armed do we launch server and optionally fire the browser - no half-ready states,
+     no dangling processes.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Start Dev Server] --> B[Locate Config]
+         B --> C[Setup Server State]
+         C --> D[Load Templates]
+         C --> E[Scan Content]
+         C --> F[Create Reload Channel]
+         D --> G[Start WebSockets Server]
+         E --> H[Start HTTP Server]
+         F --> I[Start File Watcher]
+         H --> J{Open Browser?}
+       </pre>
+     <span class="text-center my-2 text-grey text-xs">Everything runs asynchronously in
+     isolated threads, so every single piece of the process is as fast as possible</span>
+     </div>
+     @end
+
+**** Request Handling Flow
+     Every request hits a *deterministic* path router - no fuzzy matching, /no black magic involved/.
+     Assets get served directly from memory-mapped files (no disk reads after startup), while
+     content paths resolve to Norg files with extreme precision: `/about` becomes `/about.norg` or
+     `/about/index.norg` under the hood. The kicker? We inject LiveReload scripts during template
+     rendering - not through string replacement - so your HTML stays untouched.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart LR
+         A[Incoming Request] --> B{Path Type?}
+         B -->|/livereload.js| C[Inject LiveReload Script]
+         B -->|/assets/*| D[Find Asset]
+         D --> E{Exists?}
+         E -->|Yes| F[Return Asset]
+         E -->|No| G[Error 404]
+         B -->|/categories| H[Render Category Index]
+         B -->|/categories/*| I[Render Category Page]
+         B -->|Other| J[Resolve Norg Path]
+         J --> K{Found?}
+         K -->|Yes| L[Process Norg + Template]
+         K -->|No| G
+         L --> M[Inject LiveReload]
+         M --> N[Render HTML]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">Everything renders from in-memory, and stays
+     in-memory until either the artifact no longer exists or the server is closed</span>
+     </div>
+     @end
+
+**** Hot-reload pipeline
+     Hot reloading is /physics-grade engineering/: file changes get *debounced* to avoid editor
+     temp-file noise (fuck off, Vim swap/undo files), then routed by type. Template updates trigger
+     full Tera reloads without restarting the server by using Tokio's {https://docs.rs/tokio/latest/tokio/sync/struct.RwLock.html}[RwLock] atomic swaps. Content
+     changes rescan content itself and metadata in the background while broadcasting reload commands through a
+     non-blocking WebSockets channel. The result? Updates reflect in under ~300ms without clobbering
+     your browser state.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TB
+         A[File Change] --> B[Debounce Events]
+         B --> C{Change Type?}
+         C -->|Template| D[Reload Tera]
+         C -->|Asset| E[Broadcast Reload]
+         C -->|Content| F[Rescan Content/Metadata]
+         D --> G[Broadcast Reload]
+         F --> G
+         G --> H[WebSockets Server]
+         H --> I[Push Reload Command]
+         I --> J[Browser Updates]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">As everything happens inside broadcast
+     channels, if something fucks up Norgolith can recover and continue doing its job</span>
+     </div>
+     @end
+
+**** WebSockets Lifecycle
+     WebSockets operate on a strict protocol: new connections get handshaked immediately, then join
+     a broadcast group. The magic's in the channel design - file watchers push reload signals
+     without knowing connection details, while the WebSockets server handles multiplexing. When we
+     say “live reload”, we mean it: no polling, no timeouts, just pure server-pushed updates the
+     instant files change.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart LR
+         A[New Connection] --> B[Send Hello]
+         B --> C[Add to Broadcast Group]
+         C --> D[Listen Loop]
+         D --> E{Message?}
+         E -->|Reload Signal| F[Push Reload]
+         E -->|Close| G[Remove Connection]
+         H[File Change] --> I[Broadcast Channel]
+         I --> F
+         F --> J[All Clients]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">We are bundling livereload.js for live
+     reloading functionalities, no external CDN scripts are injected</span>
+     </div>
+     @end
+
+**** Shutdown Sequence
+     Even shutdowns are designed for zero residue: `SIGTERM` triggers graceful termination where HTTP
+     drains active connections, WebSockets send close frames, and the file watcher releases inotify
+     handles. This isn't just quitting, it's an orchestrated exit ensuring your next `lith dev` starts
+     in milliseconds /or even less/ without residual cache or memory leftovers.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart BT
+         A[Ctrl-C] --> B[Signal All Tasks]
+         B --> C[HTTP: Drain Connections]
+         C --> D[WebSockets: Close Channels]
+         D --> E[Watcher: Release Handles]
+         E --> F[Exit Cleanly]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">Right now, <kbd>Ctrl-C</kbd> will return an exit code
+         different than 0 due to the nature of SIGTERM. <br/>This is something that will be addressed in
+         the future</span>
+     </div>
+     @end
+
+*** Norg Under the Hood
+    Going back to the implementation of norg processing, one thing must be kept clear: *it's
+    extremely fast and without intermediaries*. No intermediate code, no external tools, no bullshit.
+    Pure and hard understanding of *norg as a first-class citizen*, we don't know what markdown or
+    pandoc is here, *only* norg. The implementation is a little complex, but we can illustrate it with
+    flowcharts:
+
+    @embed html
+    <div class="flex flex-col items-center">
+      <pre class="mermaid">
+        flowchart TD
+        A[Converter] --> B[HTML]
+        A-->C[Meta]
+      </pre>
+      <span class="my-2 text-grey text-xs">Internal structure of the converter module</span>
+    </div>
+    @end
+
+    The beginning is simple, right? The converter module splits into two modules: one that converts
+    the document to HTML and another that converts the document's metadata into a TOML structure.
+    Each of these modules has a single task, and they're separated to avoid unnecessary complexity
+    in HTML transpilation. However, the internal use of each module in Norgolith becomes more
+    extensive, let's break it down again from the very beginning so everything makes sense at first
+    sight!
+
+**** Overall Conversion Flow
+     The core conversion process starts by parsing the raw Norg document into an Abstract Syntax
+     Tree (AST) through the `rust-norg` library - no intermediaries, no bullshit. This AST gets
+     processed recursively: Headings build our Table of Contents (ToC), paragraphs get decomposed
+     into segments, and specialized elements like verbatim blocks transform directly into HTML
+     primitives. The entire pipeline outputs pure HTML and structured TOML metadata in a single pass - no wasted cycles.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart LR
+         A(Start Conversion)-->B[Parse Norg Document]
+         B-->C(Convert AST to HTML)
+         C-->D[Process Carryover Tags]
+         C-->E[Handle Headings]
+         C-->F[Process Paragraphs]
+         C-->G[Handle Lists/Quotes]
+         C-->H[Process Verbatim Blocks]
+         C-->I[Handle Links/Anchors]
+         E-->J[Generate ToC TOML]
+         J-->K[Return HTML & ToC]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">Conversion flow in a nutshell</span>
+     </div>
+     @end
+
+     It doesn't look so simple anymore, right? Let's break it down into many more pieces to make it
+     easier to process - I also struggled at first while designing it.
+
+**** Content Processing Pipeline
+     The entire conversion pipeline is a straight-shot rocket: Norg files gets parsed to ASTs, then
+     fork into dual processing streams in parallel. One stream handles pure HTML transpilation, the
+     other extract and /validates/ metadata against schemas, if any schema is declared into the site
+     configuration file. These streams converge in Tera templates where validated metadata meets
+     rendered HTML. No JSON intermediaries anywhere, just pure, efficient transformation.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart LR
+         A[Norg File] --> B[Parser]
+         B --> C[AST]
+         C --> D[HTML Converter]
+         C --> E[Metadata Extractor]
+         D --> F[HTML Fragments]
+         E --> G[Raw Metadata]
+         G --> H[Schema Validator]
+         H --> I[Validated HTML]
+         F --> J[Tera Templates]
+         I --> J
+         J --> K[Final HTML]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">Simplified processing pipeline</span>
+     </div>
+     @end
+
+**** Metadata Conversion
+     Metadata isn't some afterthought - it's first-class Norg as well. We extract raw document
+     metadata and convert it directly to TOML through deterministic type mapping: booleans stay
+     booleans, dates become ISO strings, and nested structures preserve their hierarchy. The Table
+     of Contents gets injected as TOML arrays for seamless integration with the code generation
+     later - no external parsers, no fragile regex.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Start Metadata Conversion] --> B[Extract Meta Block]
+         B --> C[Parse Metadata]
+         C --> D{Value Type?}
+         D -->|Bool| E[TOML Boolean]
+         D -->|String| F[TOML Value]
+         D -->|Number| G[TOML Integer/Float]
+         D -->|Array| H[Recurse Array]
+         D -->|Object| I[Recurse Object]
+         J[Merge ToC if Exists] --> K[Return TOML Value]
+       </pre>
+       <span
+         class="text-center my-2 text-grey text-xs"
+       >If ToC doesn't exist then we just directly
+       return the TOML Value after finishing the parsing process</span>
+     </div>
+     @end
+
+**** Opt-in Schema Validation
+     This is where Norgolith gets /dead serious/ about content integrity. We don't just extract
+     metadata - we /validate/ it against strict /yet/ flexible customizable schemas, if the user wants
+     to. The process starts by resolving hierarchical schema rules (global → directory-specific),
+     then applies four validation layers: required fields (no half-assed frontmatter), type checks
+     (dates better be dates!), pattern matching and conditional logic (if `draft=false` then require
+     `updated_at`). Any violation gets reported with surgical precision, even on the development
+     server - no fuzzy errors anywhere, nor need to waste your precious time debugging something not
+     working as expected just to find out a damn frontmatter was broken with no feedback in the
+     console.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Content File] --> B[Extract Metadata]
+         B --> C[Resolve Schema Path]
+         C --> D[Load Schema Hierarchy]
+         D --> E[Merge Schemas]
+         E --> F{Validation Rules}
+         F -->|Required Fields| G[Check Presence]
+         F -->|Field Types| H[Type Check]
+         F -->|Constraints| I[Validate Patterns/Lengths]
+         F -->|Conditional Rules| J[Apply If-Then Logic]
+         K[Collect Errors] --> L{Errors?}
+         L -->|No| M[Approve Metadata]
+         L -->|Yes| N[Report Violations]
+         N -->|Production| O[Error]
+         N -->|Development| P[Warning]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">
+         Metadata validation process, simplified. If the development server is being used then a
+         warning is returned instead of crashing out the server, in order to keep an unobtrusive
+         workflow
+       </span>
+     </div>
+     @end
+
+**** Heading Conversion
+     Headings do triple duty: they become semantic HTML headings (`<h1>`-`<h6>`), generate anchor IDs by
+     slugification, and populate our Table of Contents. The secret sauce: we sanitize IDs in-place
+     during conversion by stripping link syntax - no separate cleanup pass. Each heading's content
+     gets processed recursively, maintaining strict context isolation.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Process Heading] --> B[Sanitize Links in Title]
+         B --> C[Generate Heading ID]
+         C --> D[Build Heading Tag]
+         D --> E[Apply Carryover Attributes]
+         E --> F[Add to ToC]
+         F --> G[Process Heading Content]
+         G --> H[Return Heading HTML]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">Everything happens in the same pass to
+         guarantee maximum efficiency</span>
+     </div>
+     @end
+
+**** Paragraph Conversion
+     Paragraphs are where Norg's magic shines - as in any other /sane/ markup language, they're not
+     dumb text blocks but rich element containers. Each segment gets processed differently: text
+     gets sanitized, modifiers become proper HTML tags (`*bold*` → `<strong>`), and links transform
+     into actual anchors. The kicker? Carryover tags apply *context-aware* HTML attributes
+     mid-conversion - no post-processing needed!
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Start Paragraph Conversion] --> B[Process Segment]
+         B --> C{Segment Type?}
+         C -->|Token| D[Append Escaped Text]
+         C -->|Attached Modifier| E[Wrap in HTML Tag]
+         C -->|Inline Verbatim| F[Wrap in code Tag]
+         C -->|Link| G[Build Anchor Tag]
+         C -->|Anchor Definition| H[Build Anchor Definition]
+         G --> I[Handle Local Paths]
+         G --> J[Handle External URLs]
+         G --> K[Handle Headings]
+         H --> L[Resolve Link Target]
+         M[Apply Weak Carryover] --> N[Append to Paragraph]
+         N --> O[Return HTML Paragraph]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">If no carryover tags are present then we
+         directly return the HTML paragraph, and everything happens in the same pass again.</span>
+     </div>
+     @end
+
+**** Carryover Tag Processing
+     We have mentioned them several times already, but if you ain't familiar with Norg you must be
+     wondering /“Ok, but what the actual fuck are those?”/, and let me explain it now. Carryover
+     tags are Norg's secret weapon, and you can find a full explanation in the {https://github.com/nvim-neorg/norg-specs/blob/main/1.0-specification.norg}[specs]. In Norgolith,
+     we use them for context-aware HTML attributes. When we hit a carryover tag during conversion,
+     we immediately store its parameters as HTML attributes. These get injected into the very next
+     element processed (as we use only the /weak/ variant of carryover tags) - whether it's a heading,
+     paragraph, or verbatim block. The kick? They self-destruct after being applied. /Poof/, no
+     residual state, no side effects.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Encounter Carryover] --> B{Tag Type?}
+         B -->|Attribute| C[Store HTML Attributes]
+         B -->|Macro| D[Error: Unsupported]
+         C --> E[Apply to Next Element]
+         E --> F[Clear After Use]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">
+         Currently, macro (strong) carryover tags crash Norgolith, as they are not yet
+         implemented.<br/><i>If I recall correctly, they are not supported in the parser</i>.
+       </span>
+     </div>
+     @end
+
+**** List/Quote Handling
+     Lists and quotes aren't primitive strings nor they depend on indentation - they're recursive
+     structures. We handle them with nesting-aware conversion: lists morph into proper `<ol>`/`<ul>`
+     hierarchies with depth tracking, while quotes become `<blockquote>` wrappers. Carryover
+     attributes inject directly into container tags during traversal.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TD
+         A[Process Nestable] --> B{Type?}
+         B -->|Ordered/Unordered List| C[Generate List Tags]
+         B -->|Quote| D[Generate Blockquote Tag]
+         C --> E[Process List Items]
+         E --> F[Apply Carryover]
+         D --> F
+         F --> G[Process Children]
+         G --> H[Return List HTML]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">
+         In Norg, blockquotes can have nested blockquotes too. And thus, we must preserve it as well.
+       </span>
+     </div>
+     @end
+
+**** Template Rendering Process
+     This is where Norgolith ends the conversion process /before the production build process, of
+     course/. We don't just spit out HTML fragments - we /nuclear-fuse/ them with Templates. The
+     {https://keats.github.io/tera/}[Tera engine] takes four inputs for our HTML templates: raw HTML from conversion, validated
+     metadata, global site config, and the complete post collection (with their whole data as well!).
+     These get injected into layout templates where they become proper web pages. No front\-end
+     frameworks, no abstractions bullshit - just pure server-rendered HTML at build time.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart LR
+         A[HTML Fragment] --> B[Tera Engine]
+         C[Validated Metadata] --> B
+         D[Site Config] --> B
+         E[Post Collection] --> B
+         B --> F[Layout Template]
+         F --> G[Final HTML]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">
+         The final HTML produced is only written in disk for production builds, otherwise it stays
+         in-memory during the development process
+       </span>
+     </div>
+     @end
+
+**** Build Orchestration
+     The production build process is a kill chain: content files get validated against opt-in
+     schemas first if they do exist in the site config (fail fast, fail loud). Only clean metadata
+     proceeds to HTML conversion. Meanwhile, assets get minified in parallel - no wasteful
+     sequential processing. Everything converges in the public directory as deploy-ready files. This
+     is continuous integration for content - no manual steps, no fragile scripts, no synchronous
+     execution.
+
+     @embed html
+     <div class="flex flex-col">
+       <pre class="mermaid">
+         flowchart TB
+         A[Content Files] --> B[Schema Validation]
+         B --> C{Valid?}
+         C -->|Yes| D[Convert to HTML]
+         C -->|No| E[Fail Build]
+         D --> F[Apply Templates]
+         G[Assets] --> H[Minify/Copy]
+         F --> I[Public Directory]
+         H --> I
+         I --> J[Deploy]
+       </pre>
+       <span class="text-center my-2 text-grey text-xs">
+         The schema validation step happens only when the user declared schemas into his site
+         configuration, otherwise it is skipped. Everything is asynchronous, so there are no slowdowns!
+       </span>
+     </div>
+     @end
+
+     ---
+
+    Norgolith's conversion pipeline is a masterclass in efficient content processing: raw Norg gets
+    parsed to ASTs and split into dual HTML/metadata async streams. HTML conversion handles
+    everything from carryover tags to recursive lists with perfect precision, while metadata
+    undergoes ruthless schema validation. These streams reunite in Tera templates where they become
+    final HTML, with assets minified in parallel. The result? Blazing-fast builds where every
+    heading, paragraph, and metadata field transforms directly into web-ready output - no external
+    transpilers, no bloated JavaScript frameworks, just pure norg-to-HTML conversion.
+
+*** Writing Brings Joy Again
+    Finally, the cherry on top. We've already seen the architecture of how things work, and how I
+    finished implementing everything. But there's one essential thing left: throughout my life using
+    static site generators, I've always run into one problem - *insane defaults*. Let's be honest,
+    most SSGs require modifying the configuration /sometimes/, especially if we want to enable or
+    disable something after creating the site.
+
+    +html.loading lazy
+    .image /assets/posts/norg-on-the-web/01.png Norgolith init site demo
+
+    +html.class note
+    > *Note*: While Norgolith is interactive by default, you can pass the `--no-prompt` flag to the `init`
+    command and still get sane defaults for your site configuration. All you will have to do when
+    pushing to production is changing the `rootUrl` option if you haven't already and that's it!
+
+    +html.class mt-3 text-base-alt dark:brightness-120
+    ___
+
+    With Norgolith, I took the trouble to create interactivity and better defaults. While somewhat
+    opinionated in certain areas (e.g. RSS enabled by default), these are options I typically see
+    enabled on blogs, which is the primary use case for SSGs. *The configuration is dead simple* -
+    most options are dynamically generated through prompts when creating the site, and you can
+    easily extend the configuration if you wish. But why do this? Simple, *better defaults lead to
+    better initial results*. If I create a new site, and only have to sit down and worry about
+    creating my site's content instead of spending time reading documentation about my SSG to set
+    things up exactly how I want them /or even have sane settings/, my brain will feel comfortable.
+
+    +html.class important
+    > *Important*: The only exception to this rule is the highlighter configuration. By default,
+    Norgolith will have ootb support for both `PrismJS` and `Highlight.js` through CDN sources in the
+    default `base.html` template. However, it is disabled by default as some people would like to keep
+    it disabled or bundle the highlighting libraries with other methods. However, it is as easy as
+    changing the enable value to `true` in order to enable the support.
+
+    And let's talk about creating content. Everything is pretty straightforward! You enter a
+    command, get a prompt with a few sane defaults so you just have to press `Enter` if you agree with
+    them, and call it a day. The content's title case will be automatically transformed into the
+    {https://daringfireball.net/2008/05/title_case}[proper case] for you, so that even your title is properly capitalized!
+
+    +html.loading lazy
+    .image /assets/posts/norg-on-the-web/02.png Norgolith create content demo
+
+    You might notice that I didn't enter the file extension in the command as well, and Norgolith
+    will /automagically/ infer it for us! I know, it's only five more characters, but these five
+    characters are completely redundant. Why do you need to enter the file extension when it's
+    obvious that you're using norg, in your norg-first SSG?
+
+    Some other niceties is that we can directly create JavaScript and CSS files with the `--kind
+    <KIND>` option, and open the created files with your preferred system editor by passing the
+    `--open` flag. You create, edit then save and leave - simple and straightforward workflow.
+
+** Freeing from Markdown (Migration to Norgolith)
+   Whether you've read this far (or got here using the note at the very beginning of the post),
+   thank you. Now let's get to what really matters, the heart of this post and what you probably
+   came here for: *how to free yourself from the torturous yoke of living under markdown*, or /at least/
+   achieve it for your writing needs.
+
+*** First Steps
+    Let's start with the basics: install (or just download) Norgolith, familiarize ourselves with
+    the CLI, and make this our home. It is a simple process, I promise!
+
+    +html.class warning
+    > *Warning*:
+    Since most things explained during this section are already explained very well in the
+    documentation site, I will only do a brief explanation of some things. Please {https://norgolith.amartin.beer}[check out] the
+    documentation site if you want to know more. Additionally, this guide covers the latest
+    development version so you may find some commands are named differently (e.g. `serve` is now `dev`).
+
+**** Obtaining Norgolith
+     Norgolith can be downloaded /and optionally installed/ in multiple ways depending on your
+     environment and preferences. Below are the recommended methods:
+
+     +html.class important
+     > *Important*: The Norgolith binary is called `lith` for ergonomic reasons.
+
+***** Binary Installation
+      For stable releases, statically compiled binaries with `musl` are provided in the {https://github.com/NTBBloodbath/norgolith/releases}[releases]
+      section. There are binaries for Linux and macOS (`x86_64` and `arm64`). Windows is *currently
+      unsupported* by Norgolith.
+
+      The release tarballs contains the following files:
+      - `lith`
+      - `LICENSE`
+      - `README.md`
+
+      You can also install Norgolith using `cargo`, however this /might/ add an additional step
+      which is compiling the source code. Prefer this way /only/ if you want to use a development
+      version.
+
+      *Prerequisites*:
+      - Rust toolchain (`rustup` installed).
+      - Rust version `>= 1.77`.
+      @code bash
+      # Install from the repository
+      cargo install --git https://github.com/NTBBloodbath/norgolith --locked
+
+      # Verify the installation
+      lith --version
+      @end
+
+***** Nix Flake
+      You can add Norgolith to your NixOS configuration or local project with flakes.
+
+      *Adding Norgolith to your NixOS configuration*:
+      @code nix
+      {
+        inputs = {
+          nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+          norgolith.url = "github:NTBBloodbath/norgolith";
+        };
+        outputs =
+          { nixpkgs, norgolith, ... }:
+          {
+            nixosConfigurations.mysystem = nixpkgs.lib.nixosSystem {
+              modules = [
+                {
+                # add norgolith as a package
+                  environment.systemPackages = [
+                    norgolith.packages.x86_64-linux.default
+                  ];
+                }
+              ];
+            };
+          };
+      }
+      @end
+
+      *Adding Norgolith to your local project flake*:
+      @code nix
+      # This is just a reference flake from my own blog
+      {
+        description = "A very basic flake";
+
+        inputs = {
+          nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable&shallow=1";
+          flake-utils.url = "github:numtide/flake-utils?shallow=1";
+          norgolith.url = "github:NTBBloodbath/norgolith?shallow=1";
+        };
+
+        outputs = {
+          nixpkgs,
+          flake-utils,
+          norgolith,
+          ...
+        }:
+          flake-utils.lib.eachDefaultSystem (system: let
+              pkgs = import nixpkgs {inherit system;};
+            in
+            {
+              # nix develop
+              devShells.default = pkgs.mkShell {
+                buildInputs = with pkgs; [
+                  norgolith.packages.${system}.default
+                ];
+              };
+            });
+      }
+      @end
+
+***** Arch Linux (AUR)
+      Use Arch User Repository (AUR) helper to install `norgolith-git`.
+
+      @code bash
+      paru -S norgolith-git
+      @end
+
+      This will compile Norgolith from source. If you do not want to compile it, refer to the {***** Binary Installation}[Binary Installation] section.
+
+**** Getting Familiar with Norgolith
+     Now that we have Norgolith up and running on our system, we need to get comfortable using it
+     and learn how it works.
+
+     +html.class important
+     > *Important*: this section does *NOT* cover everything in Norgolith, topics such as theming and
+     content schemas are not mentioned here, for these things please refer to the {https://norgolith.amartin.beer/docs}[documentation site].
+
+***** CLI commands
+      Norgolith keeps familiarity with other SSGs. For a full reference of the available commands
+      and their flags/options, please refer to the {https://norgolith.amartin.beer/docs/commands/}[commands reference].
+
+      Norgolith has a simple CLI with just a handful of commands. The ones you’ll use most in your
+      daily workflow, though, are these:
+      - `lith new`: Create a new asset in the site.
+      - `lith serve` (`lith dev` on the latest development version): Build a site for development.
+      - `lith build`: Build a site for production.
+
+***** Site structure
+      Once you create a new site using `lith init <SITE_NAME>`, you will find it has an internal
+      structure:
+
+      *Site structure for latest stable version*:
+      @code bash
+      foo
+      ├── .build          # Dev server artifacts
+      ├── assets          # Static assets (CSS, JS, images)
+      ├── content         # Norg documents go here
+      ├── templates       # Tera templates for HTML generation
+      ├── theme           # Active theme files
+      └── norgolith.toml  # Site configuration
+      @end
+
+      *Site structure for latest development version*:
+      @code bash
+      foo
+      ├── assets          # Static assets (CSS, JS, images)
+      ├── content         # Norg documents go here
+      ├── templates       # Tera templates for HTML generation
+      ├── theme           # Active theme files
+      └── norgolith.toml  # Site configuration
+      @end
+
+      The key files and directories of your site structure are the following:
+      - `norgolith.toml`: Contains site-wide settings such as `title`, `author` and content schemas.
+      - `content/`: Store your Norg files here. Each file will be converted to HTML.
+      - `templates/`: Customize the HTML output using Tera templates.
+
+      +html.class note
+      > *Note*: there is also the `public/` directory, which will be generated only after running
+      the `lith build` command to build your site for production.
+
+***** Configuration
+      Norgolith uses the TOML format for configurations, please refer to the {https://norgolith.amartin.beer/docs/configuration/}[configuration reference]
+      for a full list of every possible configuration option and their valid values.
+
+      *The following is the default configuration file contents*:
+      @code toml
+      rootUrl = 'http://localhost:3030'
+      language = 'en-US'
+      title = 'foo'
+      author = 'JohnDoe'
+
+      # Code blocks highlighting
+      [highlighter]
+      enable = false
+      # engine = 'prism' # Can be 'prism' or 'hljs'. Defaults to 'prism'
+
+      # RSS feed
+      [rss]
+      enable = true
+      description = 'Latest posts'
+      ttl = 60
+      image = '/assets/favicon.png'
+      @end
+
+      +html.class note
+      > *Note*: the commands configuration has been temporarily removed from the configuration file
+      in the current development version, they will be re-added in the future.
+
+*** Getting Familiar with Tera
+    Tera is a powerful templating engine for Rust (inspired by Jinja2/Django) that Norgolith uses to
+    generate HTML for your static site. Here's a concise guide to mastering Tera templates in your
+    `templates/` directory:
+
+    +html.class note
+    > *Note*: the Norgolith documentation site also has a {https://norgolith.amartin.beer/docs/templating/}[Templating Guide] section which pretty much
+    covers all of this and includes real-world examples.
+
+**** Template Basics
+     - *Directory Structure*: Place all templates in `templates/` (e.g. `templates/base.html`).
+     - *Variables*: Render content with `{{ variable }}`:
+     @code jinja2
+     <h1>{{ metadata.title }}</h1>
+     @end
+
+     *Norgolith provides several built-in variables for use in your templates*:
+     - `metadata`: Frontmatter data from the Norg file (includes an additional `permalink` field).
+     - `config`: Global site configuration from `norgolith.toml`.
+     - `content`: The rendered HTML content.
+     - `posts`: All the posts metadata as an array.
+
+**** Template Inheritance
+     Create reusable layouts using *inheritance*:
+
+     - *Base Template* (`base.html`):
+     @code jinja2
+     <!DOCTYPE html>
+     <html>
+       <head>
+         <title>{% block title %}{% endblock %}</title>
+       </head>
+       <body>
+         {% block content %}{% endblock %}
+       </body>
+     </html>
+     @end
+     - *Child Template* (`page.html`):
+     @code jinja2
+     {% extends "base.html" %}
+
+     {% block title %}My Page{% endblock %}
+
+     {% block content %}
+     <article>{{ content | safe }}</article>
+     {% endblock %}
+     @end
+
+     See {https://keats.github.io/tera/docs/#inheritance}[Inheritance]
+
+**** Control Structures
+     - *Conditionals*:
+     @code jinja2
+     {% if metadata.draft %}
+       <span>This post is currently a draft, it might change in the future.</span>
+     {% endif %}
+     @end
+
+     - *Loops*:
+     @code jinja2
+     {% for post in posts %}
+       <h2>{{ post.title }}</h2>
+     {% endfor %}
+     @end
+
+     See {https://keats.github.io/tera/docs/#control-structures}[Control structures].
+
+**** Filters & Functions
+     Modify data directly in templates:
+
+     @code jinja2
+     {{ "hello" | capitalize }}  → "Hello"
+     {{ posts | length }}        → Number of posts
+     {{ now() | date(format="%Y-%m-%d") }} → Current date
+     @end
+
+     See {https://keats.github.io/tera/docs/#built-in-filters}[Full list of built-in filters].
+
+*** Migrating Old Posts
+    I'm going to be honest with this one, the migration process for your posts is kind of *painful*,
+    and I'm still going through it with my own posts.
+
+    Right now, as I write this post, there’s no such thing as a definitive tool for converting
+    files to norg. However, there is one tool that—while not perfect—lightens the load of
+    manually transcribing our posts by a huge margin: {https://github.com/pysan3/minorg}[minorg].
+
+    Depending on how complex your posts are, it might make a few mistakes or imperfections, but
+    overall it does a great job and I'm incredibly thankful to `@pysan3` for creating this tool. If
+    you spot any bugs, please report them in the repo along with clear steps to reproduce them so we
+    can keep making it better!
+
+    The following snippet is for converting markdown documents to norg using Nix shells. Special
+    thanks to `@Ladas552` on GitHub for providing me this snippet to convert my old blog posts (and
+    the Norgolith wiki on GitHub to a documentation site):
+    @code bash
+    # Create a Nix shell with Nim, Nimble and Pandoc
+    nix shell nixpkgs#nim-2_0 nixpkgs#nimble nixpkgs#pandoc
+
+    # Follow the minorg README instructions
+
+    # Finally, convert your documents
+    pandoc -f 'markdown' -t json \
+        /home/JohnDoe/old_blog/posts/example.md | ./minorg generate -o './posts/example.norg'
+    @end
+
+    Make sure to read the {https://github.com/pysan3/minorg#known-issues}[Known Issues] section in the README to know what will need to be fixed
+    after converting your files!
+
+*** Deploying Your Norgolith Site
+    Deploying your site built with Norgolith is really straightforward, although the final process
+    will depend on your hosting method. This section covers GitHub Pages, Codeberg Pages, and
+    self-hosting on your own server.
+
+    +html.class note
+    > *Note*: This section won't include anything related to custom domains. If you want to use your
+    own domain with a third-party provider such as GitHub Pages, please refer to their documentation.
+    Additionally, this section will be upstreamed later to the Norgolith documentation.
+
+**** GitHub Pages
+     Deploying to GitHub Pages is a pretty straightforward process thanks to CI workflows (special
+     thanks to `@boltlessengineer`, from whom I yanked his CI workflow). Simply push your blog
+     source code alongside the `public` contents generated after running `lith build` into your
+     `username.github.io` repository. Make sure to add the following CI workflow to your
+     `.github/workflows` directory:
+     @code yaml
+     name: Publish to GH Pages
+
+     permissions:
+       contents: write
+     on:
+       workflow_dispatch:
+       push:
+         paths:
+           - public/**
+         branches:
+           - main
+
+     jobs:
+       publish:
+         runs-on: ubuntu-latest
+         steps:
+           - name: Checkout
+             uses: actions/checkout@v4
+           - name: Deploy
+             uses: JamesIves/github-pages-deploy-action@v4
+             with:
+               folder: public
+     @end
+
+     If the CI didn't run during the first push, you can manually trigger it on the actions tab
+     thanks to the `workflow_dispatch` key in the workflow definition.
+
+     +html.class important
+     > *Important*: make sure the `rootUrl` option in the site configuration file reflects the full URL
+     provided by GitHub Pages if using the default address (e.g. `https://<Username>.github.io`).
+
+**** Codeberg Pages
+     With Codeberg it gets a bit more complicated, since we normally don’t have access to its CI
+     system, for which you need to have or {https://codeberg.org/Codeberg-e.V./requests/issues/new?template=ISSUE_TEMPLATE%2fWoodpecker-CI.yaml}[request] access, as well as add a `.woodpecker.yaml` file in
+     the root of your project. Following the provided {https://docs.codeberg.org/codeberg-pages/}[getting started steps] in the documentation
+     should be enough to get your site up and running. *Make sure to deploy your `public/` directory
+     contents into the main branch, and the source code for your site in another branch such as
+     `source` to keep everything organized*.
+
+     Since I personally never requested access to the CI and have never used it, I can’t provide
+     instructions for automated deployment.
+
+     +html.class important
+     > *Important*: make sure the `rootUrl` option in the site configuration file reflects the full URL
+     provided by Codeberg Pages if using the default address (e.g. `https://<Username>.codeberg.page`).
+
+**** Self-hosting
+     If you're doing self-hosting then you should know what you're doing. However, since {https://caddyserver.com/}[Caddy] is
+     the only HTTP server I currently use, I can only provide support for it (sorry, I don't
+     remember how to use Nginx).
+
+     The following is an example `Caddyfile` for serving your static site using Caddy:
+     @code nginx
+     {
+         email your_email@address.com
+     }
+
+     yourdomain.com {
+         root * /srv/yourdomain.com
+         encode zstd gzip
+
+         header {
+             Cache-Control max-age=3600
+         }
+
+         file_server {
+             precompressed br gzip
+         }
+
+         log {
+             format json
+             output file /var/log/caddy/yourdomain.com_access.log {
+                 roll_size 1gb
+                 roll_keep 5
+                 roll_keep_for 720h
+             }
+         }
+     }
+     @end
+
+     Where `/srv/yourdomain.com` is a directory that contains the artifacts produced by your `lith
+     build` in the `public/` directory.
+
+*** Current Caveats
+    Since Norgolith is still in what I like to call its infancy, it remains under constant
+    development (though I’ve taken a short break to avoid burnout). As a result, it may be missing
+    some features compared to other SSGs that don’t focus on—or even acknowledge—norg. Such
+    as:
+    - Custom 404 and 500 error templates.
+    - Complementary production files (`sitemap.xml`, `robots.txt`).
+    - HTML SEO meta tags and Open Graph tags ootb in the default templates.
+    - Archetypes equivalent, see {https://gohugo.io/content-management/archetypes/}[archetypes in Hugo] for a reference.
+    - Shortcodes support, see {https://gohugo.io/content-management/shortcodes/}[shortcodes in Hugo] for a reference.
+    - Miscellaneous templating functions such as `estimated reading time`.
+
+** Conclusion
+   Norgolith gives norg enthusiasts an /extremely/ fast, lightweight, and portable alternative that
+   zeroes in on norg for building their web content. The project is in constant dogfooding, brimming
+   with ideas, and has already been picked up by a few folks for their blogs. So what are you
+   waiting for—go for it!
+
+   If you’d like to contribute, you’re more than welcome—whether it’s just filing bug
+   reports, requesting features, or fixing typos. Please take a look at the {https://norgolith.amartin.beer/docs/contributing/}[Contributing] section on
+   the documentation site to learn the guidelines and practices I recommend following when
+   contributing code to the project. Any contribution is welcome and you can join the {https://discord.gg/T6EgTAX7ht}[Neorg
+   community on Discord] for support in the `#norgolith` channel under the `3rd party` section!
+
+   Make sure to check out the {https://github.com/NTBBloodbath/norgolith/issues?q=sort%3Aupdated-desc+is%3Aissue+is%3Aopen}[issues] currently in the repository, the {https://github.com/NTBBloodbath/norgolith/milestone/3}[milestone] for reaching version
+   1.0 (/which includes a plugin system/), and if you’d like to help me dedicate more time to the
+   project, you can also do so through {https://ko-fi.com/ntbbloodbath}[sponsoring]. Thank you so much for reading this massive tome,
+   and I’ll see you in the next post!

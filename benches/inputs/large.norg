@@ -1,0 +1,205 @@
+* Introduction
+  This document is a synthetic stress test for the rust-norg parser.
+  It contains deep heading nesting, many paragraphs with inline markup,
+  nested lists, quotes, definitions, and code blocks.
+  The *bold text*, /italic text/, and `inline verbatim` are used heavily here.
+  We also test {https://example.com}[links] and [anchor] references throughout.
+** Deep Nesting Section
+   Paragraph with *multiple* /inline/ `modifiers` and {https://rust-lang.org}[Rust link].
+   This tests the stage_3 inline parser with lots of attached modifiers.
+*** Level Three Heading
+    The /quick/ *brown* fox `jumps` over the *lazy* /dog/. Every word has markup.
+    {https://example.org}[Another link] and [yet-another] anchor definition.
+**** Level Four Heading
+     - First unordered list item with *bold* text
+     - Second unordered list item with /italic/ text
+     -- Nested item with `verbatim code`
+     -- Another nested item with {https://docs.rs}[a link]
+     --- Deeply nested with *all* /the/ `markup`
+     - Third outer item
+***** Level Five Heading
+      ~ First ordered list item
+      ~ Second ordered list item
+      ~~ Nested ordered with *bold*
+      ~~ Nested ordered with /italic/
+      ~ Third ordered item
+****** Level Six Heading
+       > Quote block with *bold* and /italic/ markup
+       > Second quote line with `verbatim` inline
+       >> Nested quote with {https://example.com}[a link]
+       >> More nested quote content
+       > Back to first level quote
+       This paragraph is under the deepest heading level.
+       It has *several* /inline/ `modifiers` to stress the parser.
+***** Back to Level Five
+      More content at level five.
+      $ Definition term one
+        Definition content with *bold* and /italic/ markup.
+      $$ Ranged definition
+         Content inside ranged definition with `code` and {https://example.com}[links].
+      $$
+      ^ Footnote title
+        Footnote content here.
+      ^^ Ranged footnote
+          Content with *markup* inside.
+      ^^
+      : Table cell
+        Table content with /italic/ and `code`.
+      :: Ranged table
+         More table content.
+      ::
+**** Back to Level Four
+     @code rust
+     fn factorial(n: u64) -> u64 {
+         match n {
+             0 => 1,
+             _ => n * factorial(n - 1),
+         }
+     }
+
+     fn main() {
+         for i in 0..10 {
+             println!("{}! = {}", i, factorial(i));
+         }
+     }
+     @end
+
+     Another paragraph after the code block.
+
+     |example
+     This is a *ranged* tag with /inline/ markup.
+     It spans multiple lines.
+     |end
+
+     =macro.test param1 param2
+     Content inside a macro tag with *bold* text.
+     =end
+*** Back to Level Three
+    More paragraphs to increase document size.
+    Each paragraph has *some* /inline/ `markup` to stress stage_3.
+    The parser needs to handle {https://links.example.com}[many links] efficiently.
+
+    +html.class important
+    > *Important*: This carryover tag applies a CSS class to the next element.
+
+    +html.loading lazy
+    .image /assets/large-image.png A large synthetic image
+
+    ___
+
+    A paragraph after a horizontal rule.
+    Still testing *bold*, /italic/, and `verbatim` inline parsing.
+** Second Major Section
+   This section contains more diverse constructs.
+
+   *** Subsection A
+       - List item one
+       - List item two
+       - List item three
+       -- Nested A
+       -- Nested B
+       --- Deep nested
+       - List item four
+       - List item five
+
+       > Quote one
+       > Quote two
+       >> Nested quote
+       > Quote three
+
+   *** Subsection B
+       ~ Ordered one
+       ~ Ordered two
+       ~~ Nested ordered A
+       ~~ Nested ordered B
+       ~ Ordered three
+       ~~~~ Very nested ordered
+       ~ Ordered four
+
+   *** Subsection C
+       $ Term A
+         Definition of term A.
+       $ Term B
+         Definition of term B with *bold*.
+       $$ Ranged Term C
+          Content of ranged term C.
+       $$
+
+*** Third Level Again
+    Paragraph with extensive inline markup: *bold* /italic/ `verbatim` and
+    a {https://norgolith.amartin.beer}[link to norgolith docs].
+    Also testing <linkable with markup*> syntax here.
+
+    @code python
+    def fibonacci(n):
+        if n <= 1:
+            return n
+        return fibonacci(n - 1) + fibonacci(n - 2)
+
+    for i in range(20):
+        print(f"F({i}) = {fibonacci(i)}")
+    @end
+
+    |tag.name param
+    Some content inside a ranged standard tag.
+    |end
+
+    .infirm-tag param1 param2
+
+** Fourth Major Section
+   Carrying on with more content to reach target size.
+
+   *** More Nesting
+       * First bold text in a heading paragraph.
+       /Italic text here too./
+
+       - Alpha
+       - Beta
+       - Gamma
+       -- Delta
+       -- Epsilon
+       --- Zeta
+       --- Eta
+       ---- Theta
+
+       > Philosophical quote
+       >> Attributed to someone *important*
+       >>> Deep nested quote
+
+       $ Alpha definition
+         With some definition content.
+
+       : Cell one
+         Cell content.
+
+   *** Even More Content
+       More paragraphs with *bold*, /italic/, `code`, and {https://example.com}[URL] markers.
+       The quick brown fox jumps over the lazy dog.
+       /The five boxing wizards/ jump quickly.
+       *How vexingly* quick daft zebras jump.
+       `Pack my box with` five dozen liquor jugs.
+
+       @code javascript
+       const express = require('express');
+       const app = express();
+
+       app.get('/', (req, res) => {
+         res.send('Hello World!');
+       });
+
+       app.listen(3000, () => {
+         console.log('Server running on port 3000');
+       });
+       @end
+
+* Conclusion
+  This is the end of the large benchmark fixture.
+  It contains diverse Norg constructs to stress all four parser stages.
+  *Stage 1* tokenizes the raw input.
+  /Stage 2/ organizes tokens into blocks.
+  `Stage 3` resolves inline markup and attached modifiers.
+  {https://github.com/nvim-neorg/rust-norg}[Stage 4] builds the tree structure.
+
+  ___
+
+  Final paragraph with /no/ special markup at all.

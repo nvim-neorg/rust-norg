@@ -11,5 +11,14 @@ textwrap = "0.16.1"
 unicode_categories = "0.1.1"
 
 [dev-dependencies]
+criterion = { version = "0.8.2", features = ["html_reports"] }
 insta = { version = "1.39.0", features = ["yaml"] }
 proptest = "1.4.0"
+
+[profile.bench]
+lto = true
+codegen-units = 1
+
+[[bench]]
+name = "parser_benchmarks"
+harness = false

@@ -3,7 +3,7 @@ use error::NorgParseError;
 
 pub use crate::stage_1::stage_1;
 pub use crate::stage_2::stage_2;
-use crate::stage_4::stage_4;
+pub use crate::stage_4::stage_4;
 
 pub use crate::stage_2::ParagraphSegmentToken;
 pub use crate::stage_3::*;
