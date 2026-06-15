@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-chumsky = "0.9.3"
+chumsky = "0.13"
 itertools = "0.13.0"
 serde = { version = "1.0.203", features = ["derive"] }
 textwrap = "0.16.1"

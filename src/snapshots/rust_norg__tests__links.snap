@@ -71,17 +71,17 @@ expression: examples
             - Token:
                 Text: description
 - - Paragraph:
-      - Link:
-          filepath: ~
-          targets:
-            - Heading:
-                level: 1
-                title:
+      - Anchor:
+          content:
+            - AttachedModifier:
+                modifier_type: "*"
+                content:
                   - Token:
-                      Text: hello
-          description:
-            - Token:
-                Text: description
+                      Text: anchored
+                  - Token: Whitespace
+                  - Token:
+                      Text: description
+          description: ~
 - - Paragraph:
       - AnchorDefinition:
           content:

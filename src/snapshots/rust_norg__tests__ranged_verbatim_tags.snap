@@ -13,14 +13,11 @@ expression: examples
         - some-text
         - here
       parameters:
-        - "lua\\ language"
-        - second-parameter
-      content: "print(\"Hello world!\")\n"
+        - "lua\\ language second-parameter  print(\"Hello world!\")  "
+      content: ""
 - - VerbatimRangedTag:
       name:
         - some-complex_tag_
       parameters:
-        - first-parameter
-        - "#&*(&$!)"
-        - third-parameter
-      content: "function hello()\n    print(\"Hello World\")\nend\n\nhello()\n"
+        - "first-parameter #&*(&$!) third-parameter  function hello()  print(\"Hello World\")  end  hello()  "
+      content: ""

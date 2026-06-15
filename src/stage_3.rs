@@ -43,59 +43,29 @@ impl std::fmt::Display for RangeableDetachedModifier {
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum TodoStatus {
-    /// ` `
     Undone,
-    /// `x`
     Done,
-    /// `?`
     NeedsClarification,
-    /// `=`
     Paused,
-    /// `!`
     Urgent,
-    /// `+` or `+ 4th may`
     Recurring(Option<String>),
-    /// `-`
     Pending,
-    /// `_`
     Canceled,
 }
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum DetachedModifierExtension {
-    /// todo item status:
-    /// `- ( ) undone`
-    /// `- (x) done`
-    /// `- (?) needs clarification`
-    /// `- (=) paused/on hold`
-    /// `- (!) urgent`
-    /// `- (+) recurring`
-    /// `- (+ 15th May) recurring with a time stamp`
-    /// `- (-) in progress/pending`
-    /// `- (_) put down/canceled`
     Todo(TodoStatus),
-
-    /// Priority, `#` and then any text
-    /// `- (# A) Priority A`
     Priority(String),
-
-    /// Time stamp extension:
-    /// `- (@ <some time>) list item text`
     Timestamp(String),
-
-    /// Time stamp for the due date/deadline for this item
-    /// `- (< 1 Jan 2025) Do something`
     DueDate(String),
-
-    /// Time stamp for the start time of the item:
-    /// `- (> 2 Jan 2025)` Start something
     StartDate(String),
 }
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum CarryoverTag {
-    Attribute, // `+`
-    Macro,     // `#`
+    Attribute,
+    Macro,
 }
 
 #[derive(PartialEq, Serialize)]
@@ -104,10 +74,11 @@ pub enum RangedTag {
     Standard,
 }
 
-fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
-    ParagraphSegmentToken,
+fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
+    'a,
+    &'a [ParagraphSegmentToken],
     Vec<ParagraphSegment>,
-    Error = chumsky::error::Simple<ParagraphSegmentToken>,
+    extra::Err<Rich<'a, ParagraphSegmentToken>>,
 > {
     let token = any().map(ParagraphSegment::Token);
     let modifier = select! {
@@ -115,13 +86,13 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
     };
 
     let whitespace_or_special = select! {
-        w @ ParagraphSegmentToken::Whitespace => w,
-        s @ ParagraphSegmentToken::Special(_) => s,
+        ParagraphSegmentToken::Whitespace => ParagraphSegmentToken::Whitespace,
+        ParagraphSegmentToken::Special(c) => ParagraphSegmentToken::Special(c),
     };
 
     let opening_modifier_candidate = whitespace_or_special
-        .then(modifier.repeated().at_least(1))
-        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .then(modifier.repeated().at_least(1).collect::<Vec<_>>())
+        .then(any().filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Whitespace)))
         .map(|((left, modifiers), right)| {
             ParagraphSegment::AttachedModifierOpener((Some(left), modifiers, right))
         });
@@ -129,47 +100,42 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
     let left_empty_opening_modifier = modifier
         .repeated()
         .at_least(1)
-        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .collect::<Vec<_>>()
+        .then(any().filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Whitespace)))
         .map(|(modifiers, right)| {
             ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
         });
 
+    let not_backtick = any()
+        .filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Special('`')));
+
     let inline_verbatim = just(ParagraphSegmentToken::Special('`'))
-        .ignore_then(
-            just(ParagraphSegmentToken::Special('`'))
-                .not()
-                .repeated()
-                .at_least(1),
-        )
+        .ignore_then(not_backtick.repeated().at_least(1).collect::<Vec<_>>())
         .then_ignore(just(ParagraphSegmentToken::Special('`')))
         .map(ParagraphSegment::InlineVerbatim);
 
+    let not_close_bracket = any()
+        .filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Special(']')));
+
     let anchor = just(ParagraphSegmentToken::Special('['))
-        .ignore_then(
-            just(ParagraphSegmentToken::Special(']'))
-                .not()
-                .repeated()
-                .at_least(1),
-        )
+        .ignore_then(not_close_bracket.repeated().at_least(1).collect::<Vec<_>>())
         .then_ignore(just(ParagraphSegmentToken::Special(']')));
 
+    let not_colon = any()
+        .filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Special(':')));
+
+    let filepath_inner = just(ParagraphSegmentToken::Special(':'))
+        .ignore_then(not_colon.repeated().at_least(1).collect::<Vec<_>>())
+        .then_ignore(just(ParagraphSegmentToken::Special(':')));
+
     let link = just(ParagraphSegmentToken::Special('{'))
-        .ignore_then(
-            just(ParagraphSegmentToken::Special(':'))
-                .ignore_then(
-                    just(ParagraphSegmentToken::Special(':'))
-                        .not()
-                        .repeated()
-                        .at_least(1),
-                )
-                .then_ignore(just(ParagraphSegmentToken::Special(':')))
-                .or_not(),
-        )
+        .ignore_then(filepath_inner.or_not())
         .then(
             choice((
                 just(ParagraphSegmentToken::Special('*'))
                     .repeated()
                     .at_least(1)
+                    .collect::<Vec<_>>()
                     .map(|tokens| "*".repeat(tokens.len())),
                 just(ParagraphSegmentToken::Special('$')).to("$".to_string()),
                 just(ParagraphSegmentToken::Special('^')).to("^".to_string()),
@@ -186,10 +152,10 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             .or_not(),
         )
         .then(
-            just(ParagraphSegmentToken::Special('}'))
-                .not()
+            any().filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Special('}')))
                 .repeated()
                 .at_least(1)
+                .collect::<Vec<_>>()
                 .or_not(),
         )
         .then_ignore(just(ParagraphSegmentToken::Special('}')))
@@ -198,25 +164,23 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             |(((filepath, modifiers), content), description)| ParagraphSegment::Link {
                 filepath: filepath
                     .map(|content| content.into_iter().map_into::<String>().collect()),
-                description: description.map(|content| parse_paragraph(content).unwrap()),
+                description: description.map(parse_paragraph),
                 targets: if let Some(content) = content {
                     vec![if let Some(modifiers) = modifiers {
                         match modifiers.as_str() {
-                            "$" => LinkTarget::Definition(parse_paragraph(content).unwrap()),
-                            "^" => LinkTarget::Footnote(parse_paragraph(content).unwrap()),
-                            "?" => LinkTarget::Wiki(parse_paragraph(content).unwrap()),
-                            "=" => LinkTarget::Extendable(parse_paragraph(content).unwrap()),
+                            "$" => LinkTarget::Definition(parse_paragraph(content)),
+                            "^" => LinkTarget::Footnote(parse_paragraph(content)),
+                            "?" => LinkTarget::Wiki(parse_paragraph(content)),
+                            "=" => LinkTarget::Extendable(parse_paragraph(content)),
                             "/" => {
                                 LinkTarget::Path(content.into_iter().map_into::<String>().collect())
                             }
                             "@" => LinkTarget::Timestamp(
                                 content.into_iter().map_into::<String>().collect(),
                             ),
-
-                            // Only other possibility is a heading.
                             str => LinkTarget::Heading {
                                 level: str.len() as u16,
-                                title: parse_paragraph(content).unwrap(),
+                                title: parse_paragraph(content),
                             },
                         }
                     } else {
@@ -228,24 +192,22 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
             },
         );
 
-    let inline_linkable = just(ParagraphSegmentToken::Special('<'))
-        .ignore_then(
-            just(ParagraphSegmentToken::Special('>'))
-                .not()
-                .repeated()
-                .at_least(1),
-        )
-        .then_ignore(just(ParagraphSegmentToken::Special('>')))
-        .map(|content| ParagraphSegment::InlineLinkTarget(parse_paragraph(content).unwrap()));
+    let not_close_angle = any()
+        .filter(|t: &ParagraphSegmentToken| !matches!(t, ParagraphSegmentToken::Special('>')));
 
-    left_empty_opening_modifier.or_not().chain(
+    let inline_linkable = just(ParagraphSegmentToken::Special('<'))
+        .ignore_then(not_close_angle.repeated().at_least(1).collect::<Vec<_>>())
+        .then_ignore(just(ParagraphSegmentToken::Special('>')))
+        .map(|content| ParagraphSegment::InlineLinkTarget(parse_paragraph(content)));
+
+    left_empty_opening_modifier.or_not().then(
         choice((
             link.clone(),
             anchor
                 .clone()
                 .then(link)
                 .map(|(content, link)| ParagraphSegment::AnchorDefinition {
-                    content: parse_paragraph(content).unwrap(),
+                    content: parse_paragraph(content),
                     target: Box::new(link),
                 }),
             inline_verbatim,
@@ -253,18 +215,27 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
                 .clone()
                 .then(anchor.clone().or_not())
                 .map(|(content, description)| ParagraphSegment::Anchor {
-                    content: parse_paragraph(content).unwrap(),
-                    description: description.map(|content| parse_paragraph(content).unwrap()),
+                    content: parse_paragraph(content),
+                    description: description.map(parse_paragraph),
                 }),
             inline_linkable,
             opening_modifier_candidate,
             token,
         ))
         .repeated()
-        .at_least(1),
-    )
+        .at_least(1)
+        .collect::<Vec<_>>(),
+    ).map(|(prefix, mut body)| {
+        let mut result = match prefix {
+            Some(p) => vec![p],
+            None => vec![],
+        };
+        result.append(&mut body);
+        result
+    })
 }
 
+#[allow(clippy::result_large_err)]
 fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
@@ -279,41 +250,40 @@ fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment
         .collect()
 }
 
-fn paragraph_parser_closer_candidates(
-) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
-{
-    use ParagraphSegment::*;
+fn paragraph_parser_closer_candidates<'a>(
+) -> impl Parser<'a, &'a [ParagraphSegment], Vec<ParagraphSegment>, extra::Err<Rich<'a, ParagraphSegment>>> {
+    use ParagraphSegment as PS;
+    use ParagraphSegmentToken as PTST;
 
     let token = any();
     let modifier = select! {
-        Token(ParagraphSegmentToken::Special(c @ ('*' | '/' | '_' | '-'))) => c,
+        PS::Token(PTST::Special(c @ ('*' | '/' | '_' | '-'))) => c,
     };
 
     let whitespace_or_special = select! {
-        w @ Token(ParagraphSegmentToken::Whitespace) => w,
-        s @ Token(ParagraphSegmentToken::Special(_)) => s,
+        PS::Token(PTST::Whitespace) => PTST::Whitespace,
+        PS::Token(PTST::Special(c)) => PTST::Special(c),
     };
 
-    let closing_modifier_candidate = just(Token(ParagraphSegmentToken::Whitespace))
-        .not()
-        .then(modifier.repeated().at_least(1))
+    let not_whitespace = any()
+        .filter(|seg: &PS| !matches!(seg, PS::Token(PTST::Whitespace)));
+
+    let closing_modifier_candidate = not_whitespace
+        .then(modifier.repeated().at_least(1).collect::<Vec<_>>())
         .then(whitespace_or_special)
         .map(|((left, modifiers), right)| {
-            ParagraphSegment::AttachedModifierCloserCandidate((
+            PS::AttachedModifierCloserCandidate((
                 Box::new(left),
                 modifiers,
-                Some(Box::new(right)),
+                Some(Box::new(PS::Token(right))),
             ))
         });
 
-    // TODO(vhyrro): This is not optimal, as it causes a second parse of a potentially long string
-    // of nodes. Ideally, the `end()` check should be done directly in a single parse.
-    let closing_modifier_candidate_with_eof = just(Token(ParagraphSegmentToken::Whitespace))
-        .not()
-        .then(modifier.repeated().at_least(1))
+    let closing_modifier_candidate_with_eof = not_whitespace
+        .then(modifier.repeated().at_least(1).collect::<Vec<_>>())
         .then_ignore(end())
         .map(|(left, modifiers)| {
-            ParagraphSegment::AttachedModifierCloserCandidate((Box::new(left), modifiers, None))
+            PS::AttachedModifierCloserCandidate((Box::new(left), modifiers, None))
         });
 
     choice((
@@ -323,6 +293,7 @@ fn paragraph_parser_closer_candidates(
     ))
     .repeated()
     .at_least(1)
+    .collect::<Vec<_>>()
 }
 
 fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
@@ -372,16 +343,18 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
         })
 }
 
-fn paragraph_rollup_candidates(
-) -> impl Parser<ParagraphSegment, Vec<ParagraphSegment>, Error = chumsky::error::Simple<ParagraphSegment>>
-{
+fn paragraph_rollup_candidates<'a>(
+) -> impl Parser<'a, &'a [ParagraphSegment], Vec<ParagraphSegment>, extra::Err<Rich<'a, ParagraphSegment>>> {
     let candidate = select! { ParagraphSegment::AttachedModifierCloser(c) => c, };
 
-    let attached_modifier = recursive(|attached_modifier| {
+    let not_candidate = any()
+        .filter(|seg: &ParagraphSegment| !matches!(seg, ParagraphSegment::AttachedModifierCloser(_)));
+
+    let attached_modifier = recursive::<_, _, extra::Err<Rich<'a, ParagraphSegment>>, _, _>(|attached_modifier| {
         select! {
             ParagraphSegment::AttachedModifierCandidate { modifier_type, .. } => modifier_type,
         }
-        .then(attached_modifier.or(candidate.not()).repeated().at_least(1))
+        .then(attached_modifier.or(not_candidate).repeated().at_least(1).collect::<Vec<_>>())
         .then(candidate)
         .try_map(|((modifier_type, content), closer), span| {
             if modifier_type == closer {
@@ -390,7 +363,7 @@ fn paragraph_rollup_candidates(
                     content,
                 })
             } else {
-                Err(Simple::custom(
+                Err(Rich::custom(
                     span,
                     "differing opening and closing modifiers found",
                 ))
@@ -398,7 +371,7 @@ fn paragraph_rollup_candidates(
         })
     });
 
-    choice((attached_modifier, any())).repeated().at_least(1)
+    choice((attached_modifier, any())).repeated().at_least(1).collect::<Vec<_>>()
 }
 
 fn eliminate_invalid_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
@@ -496,18 +469,26 @@ pub enum ParagraphSegment {
 
 fn parse_paragraph(
     input: Vec<ParagraphSegmentToken>,
-) -> Result<Vec<ParagraphSegment>, Vec<chumsky::error::Simple<ParagraphSegmentToken>>> {
-    Ok(eliminate_invalid_candidates(unravel_candidates(
-        paragraph_rollup_candidates()
-            .parse(unravel_candidates(
-                paragraph_parser_closer_candidates()
-                    .parse(unravel_candidates(dedup_opener_candidates(
-                        paragraph_parser_opener_candidates_and_links().parse(input)?,
-                    )))
-                    .unwrap(),
-            ))
-            .unwrap(),
-    )))
+) -> Vec<ParagraphSegment> {
+    let stage1_result = paragraph_parser_opener_candidates_and_links()
+        .parse(&input[..])
+        .into_result()
+        .unwrap();
+    let deduped = dedup_opener_candidates(stage1_result);
+    let unraveled1 = unravel_candidates(deduped);
+
+    let stage2_result = paragraph_parser_closer_candidates()
+        .parse(&unraveled1)
+        .into_result()
+        .unwrap();
+    let unraveled2 = unravel_candidates(stage2_result);
+
+    let stage3_result = paragraph_rollup_candidates()
+        .parse(&unraveled2)
+        .into_result()
+        .unwrap();
+
+    eliminate_invalid_candidates(unravel_candidates(stage3_result))
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]
@@ -560,10 +541,11 @@ pub enum DelimitingModifier {
     HorizontalRule,
 }
 
-fn detached_modifier_extensions() -> impl Parser<
-    ParagraphSegmentToken,
+fn detached_modifier_extensions<'a>() -> impl Parser<
+    'a,
+    &'a [ParagraphSegmentToken],
     Vec<DetachedModifierExtension>,
-    Error = chumsky::error::Simple<ParagraphSegmentToken>,
+    extra::Err<Rich<'a, ParagraphSegmentToken>>,
 > {
     use ParagraphSegmentToken::*;
 
@@ -573,22 +555,25 @@ fn detached_modifier_extensions() -> impl Parser<
         Text(c) if c == "x" || c == "?" => Text(c),
     };
 
+    let not_pipe = any()
+        .filter(|t: &ParagraphSegmentToken| !matches!(t, Special('|')));
+
+    let attached_content = just(Whitespace)
+        .ignore_then(not_pipe.repeated().collect::<Vec<_>>())
+        .or_not()
+        .map(|tokens| {
+            if let Some(tokens) = tokens {
+                tokens
+                    .into_iter()
+                    .map_into::<String>()
+                    .collect()
+            } else {
+                String::from("")
+            }
+        });
+
     let detached_modifier_extension = detached_modifier_extension_tokens
-        .then(
-            just(Whitespace)
-                .ignore_then(select!(Special('|') => Special('|')).not().repeated())
-                .or_not()
-                .map(|tokens| {
-                    if let Some(tokens) = tokens {
-                        tokens
-                            .into_iter()
-                            .map_into::<String>()
-                            .collect()
-                    } else {
-                        String::from("")
-                    }
-                }),
-        )
+        .then(attached_content)
         .map(|(spec, metadata)| match spec {
             Special('@') => DetachedModifierExtension::Timestamp(metadata),
             Special('#') => DetachedModifierExtension::Priority(metadata),
@@ -616,11 +601,12 @@ fn detached_modifier_extensions() -> impl Parser<
     detached_modifier_extension
         .separated_by(just(Special('|')))
         .at_least(1)
+        .collect::<Vec<_>>()
 }
 
-pub fn stage_3(
-) -> impl Parser<NorgBlock, Vec<NorgASTFlat>, Error = chumsky::error::Simple<NorgBlock>> {
-    recursive(|stage_3| {
+pub fn stage_3<'src>(
+) -> impl Parser<'src, &'src [NorgBlock], Vec<NorgASTFlat>, extra::Err<Rich<'src, NorgBlock>>> {
+    recursive::<_, _, extra::Err<Rich<'src, NorgBlock>>, _, _>(|stage_3| {
         let paragraph_segment = select! {
             NorgBlock::ParagraphSegment(content) => content,
         };
@@ -633,18 +619,24 @@ pub fn stage_3(
             paragraph_segment
                 .repeated()
                 .at_least(1)
-                .flatten()
-                .chain(paragraph_segment_end.or_not()),
-            paragraph_segment_end,
+                .collect::<Vec<_>>()
+                .then(paragraph_segment_end.or_not())
+                .map(|(segments, end)| {
+                    let mut tokens: Vec<ParagraphSegmentToken> = segments.into_iter().flatten().collect();
+                    if let Some(end) = end {
+                        tokens.extend(end);
+                    }
+                    tokens
+                }),
+            paragraph_segment_end
+                .map(|end| end),
         ))
             .map(|mut tokens| {
-                // Trim trailing whitespace (both user-induced but also induced by us when
-                // converting single newlines to whitespace).
                 if let Some(ParagraphSegmentToken::Whitespace) = tokens.last() {
                     tokens.pop();
                 }
 
-                NorgASTFlat::Paragraph(parse_paragraph(tokens).unwrap())
+                NorgASTFlat::Paragraph(parse_paragraph(tokens))
             });
 
         let nestable_detached_modifier = select! {
@@ -654,7 +646,7 @@ pub fn stage_3(
         }.then(paragraph).map(|((modifier_type, level, extension_section), paragraph)| NorgASTFlat::NestableDetachedModifier {
                 modifier_type,
                 level,
-                extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+                extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
                 content: Box::new(paragraph),
             });
 
@@ -664,28 +656,30 @@ pub fn stage_3(
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: false, title, extension_section } => (RangeableDetachedModifier::Table, title, extension_section),
         }.then(paragraph).map(|((modifier_type, title, extension_section), paragraph)| NorgASTFlat::RangeableDetachedModifier {
                 modifier_type,
-                title: parse_paragraph(title).unwrap(),
-                extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+                title: parse_paragraph(title),
+                extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
                 content: vec![paragraph],
             });
+
+        let stage_3_ref = stage_3.clone();
 
         let ranged_detached_modifier = select! {
             NorgBlock::RangeableDetachedModifier { modifier_type: '$', ranged: true, title, extension_section } => ('$', RangeableDetachedModifier::Definition, title, extension_section),
             NorgBlock::RangeableDetachedModifier { modifier_type: '^', ranged: true, title, extension_section } => ('^', RangeableDetachedModifier::Footnote, title, extension_section),
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: true, title, extension_section } => (':', RangeableDetachedModifier::Table, title, extension_section),
         }
-            .then(stage_3.clone().repeated())
+            .then(stage_3_ref.repeated().collect::<Vec<_>>())
             .then(select! { NorgBlock::RangeableDetachedModifierClose(c) => c })
             .try_map(|(((opening_ch, modifier_type, title, extension_section), content), closing_ch), span|
                 if opening_ch == closing_ch {
                     Ok(NorgASTFlat::RangeableDetachedModifier {
                         modifier_type,
-                        title: parse_paragraph(title).unwrap(),
-                        extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+                        title: parse_paragraph(title),
+                        extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
                         content,
                     })
                 } else {
-                    Err(Simple::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
+                    Err(Rich::custom(span, format!("Expected '{0}{0}' to close modifier, found '{1}{1}' instead.", opening_ch, closing_ch)))
                 });
 
         let heading = select! {
@@ -693,18 +687,20 @@ pub fn stage_3(
         }
         .try_map(move |(level, title, extension_section), _span| Ok(NorgASTFlat::Heading {
             level,
-            title: parse_paragraph(title).unwrap(),
-            extensions: detached_modifier_extensions().parse(extension_section).unwrap_or_default(),
+            title: parse_paragraph(title),
+            extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
         }));
 
         let stringify_tokens_and_split = move |tokens: ParagraphTokenList| -> Vec<String> {
             tokens.into_iter().map_into::<String>().collect::<String>().split('.').map_into().collect()
         };
 
+        let stage_3_ref2 = stage_3.clone();
+
         let carryover_tag = select! {
             NorgBlock::CarryoverTag { tag_type: '+', name, parameters } => (CarryoverTag::Attribute, name, parameters),
             NorgBlock::CarryoverTag { tag_type: '#', name, parameters } => (CarryoverTag::Macro, name, parameters),
-        }.then(stage_3.clone()).map(move |((tag_type, name, parameters), next_object)| {
+        }.then(stage_3_ref2).map(move |((tag_type, name, parameters), next_object)| {
                 NorgASTFlat::CarryoverTag {
                     tag_type,
                     name: stringify_tokens_and_split(name),
@@ -723,16 +719,18 @@ pub fn stage_3(
             },
         };
 
+        let stage_3_ref3 = stage_3.clone();
+
         let ranged_tag = select! {
             NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect()),
             NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect())
-        }.then(stage_3.repeated()).then(select! {
+        }.then(stage_3_ref3.repeated().collect::<Vec<_>>()).then(select! {
             NorgBlock::RangedTagEnd('=') => RangedTag::Macro,
             NorgBlock::RangedTagEnd('|') => RangedTag::Standard,
         }).try_map(|(((tag_type, name, parameters), content), closing_tag_type), span| if tag_type == closing_tag_type {
             Ok(NorgASTFlat::RangedTag { name, parameters, content })
         } else {
-            Err(Simple::custom(span, "Invalid closing modifier for ranged tag.")) // TODO: Improve errors
+            Err(Rich::custom(span, "Invalid closing modifier for ranged tag."))
         });
 
         let infirm_tag = select! {
@@ -757,5 +755,5 @@ pub fn stage_3(
             ranged_detached_modifier,
             paragraph,
         ))
-    }).repeated().at_least(1)
+    }).repeated().at_least(1).collect::<Vec<_>>()
 }

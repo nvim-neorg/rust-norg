@@ -3,10 +3,7 @@
 use std::fmt::Write as _;
 
 use chumsky::prelude::*;
-use chumsky::{
-    text::{keyword, Character},
-    Parser,
-};
+use chumsky::text::{keyword, Char};
 use serde::Serialize;
 use unicode_categories::UnicodeCategories;
 
@@ -50,18 +47,18 @@ const SPECIAL_CHARS: &str = "*-~/_!%^,\"'`$:@|=.#+<>()[]{}\\";
 const TAG_CHARS: &str = "|@=";
 
 /// Parses a `.norg` document and breaks it up into tokens.
-pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Simple<char>> {
-    let ws = filter(|c: &char| c.is_inline_whitespace() || c.is_separator_space())
+pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Err<Rich<'src, char>>> {
+    let ws = any::<_, extra::Err<Rich<char>>>()
+        .filter(|c: &char| c.is_inline_whitespace() || c.is_separator_space())
         .repeated()
         .at_least(1)
-        .map(|content| NorgToken::Whitespace(content.len() as u16));
+        .collect::<String>()
+        .map(|s| NorgToken::Whitespace(s.len() as u16));
 
-    // Fallback parser for any non-special character.
-    let character = any().map(NorgToken::Regular);
+    let character = any::<_, extra::Err<Rich<char>>>().map(NorgToken::Regular);
 
-    let parse_newline = filter(|c: &char| {
-        *c == '\n' || *c == '\r' || c.is_separator_line() || c.is_separator_paragraph()
-    });
+    let parse_newline = any::<_, extra::Err<Rich<char>>>()
+        .filter(|c: &char| *c == '\n' || *c == '\r' || c.is_separator_line() || c.is_separator_paragraph());
 
     let newline = parse_newline
         .to(NorgToken::SingleNewline);
@@ -69,7 +66,8 @@ pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Si
     let newlines = parse_newline
         .repeated()
         .at_least(2)
-        .map(|content| NorgToken::Newlines(content.len() as u16));
+        .collect::<String>()
+        .map(|s| NorgToken::Newlines(s.len() as u16));
 
     let special = one_of(SPECIAL_CHARS).map(NorgToken::Special);
 
@@ -80,7 +78,11 @@ pub fn stage_1() -> impl Parser<char, Vec<NorgToken>, Error = chumsky::error::Si
         .then_ignore(choice((one_of("\n\r").rewind().map(|_| ()), end())))
         .map(NorgToken::End);
 
-    choice((tag_end, escape, special, newlines, newline, ws, character))
+    let tokens = choice((tag_end, escape, special, newlines, newline, ws, character))
         .repeated()
-        .chain(end().to(NorgToken::Eof))
+        .collect::<Vec<_>>();
+
+    tokens
+        .then(end().to(NorgToken::Eof))
+        .map(|(mut v, eof)| { v.push(eof); v })
 }

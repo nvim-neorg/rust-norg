@@ -27,13 +27,23 @@ mod stage_4;
 /// * `Ok(Vec<NorgASTFlat>)` if parsing is successful.
 /// * `Err(NorgParseError)` if any stage of parsing fails.
 pub fn parse(input: &str) -> Result<Vec<NorgASTFlat>, NorgParseError> {
-    Ok(stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?)
+    let tokens = stage_1().parse(input).into_result()
+        .map_err(|e| NorgParseError::Stage1(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    let blocks = stage_2().parse(&tokens).into_result()
+        .map_err(|e| NorgParseError::Stage2(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    let output = stage_3().parse(&blocks).into_result()
+        .map_err(|e| NorgParseError::Stage3(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    Ok(output)
 }
 
 pub fn parse_tree(input: &str) -> Result<Vec<NorgAST>, NorgParseError> {
-    Ok(stage_4(
-        stage_3().parse(stage_2().parse(stage_1().parse(input)?)?)?,
-    ))
+    let tokens = stage_1().parse(input).into_result()
+        .map_err(|e| NorgParseError::Stage1(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    let blocks = stage_2().parse(&tokens).into_result()
+        .map_err(|e| NorgParseError::Stage2(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    let flat = stage_3().parse(&blocks).into_result()
+        .map_err(|e| NorgParseError::Stage3(e.into_iter().map(|e| e.into_owned()).collect()))?;
+    Ok(stage_4(flat))
 }
 
 #[cfg(test)]
@@ -78,6 +88,78 @@ mod tests {
                more sneaky content inside.
             * Back to regular heading
             ",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    proptest! {
+        #[test]
+        fn paragraphs_proptests(paragraph_content in PARAGRAPH_REGEX) {
+            parse(&paragraph_content).unwrap();
+        }
+    }
+
+    #[test]
+    fn modifiers() {
+        let examples: Vec<_> = [
+            "this *is* a test",
+            "hello, *world*!",
+            "*hello, world!*",
+            "*hello*, world!",
+            "*/hello/*, world!",
+            "*hi!* how are you?",
+            "this *is a test",
+            "this *is/ a test",
+            "this *is*/ a test",
+            "this */is/*/ a test",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn links() {
+        let examples: Vec<_> = [
+            "{https://github.com/nvim-neorg/neorg}",
+            "{$ hello!}",
+            "{/ a-path.txt}",
+            "{********* hello!}",
+            "{:/some/file:*** a -path-.txt}",
+            "[anchor]",
+            "[anchor][description]",
+            "[*anchored description*]",
+            "[description]{* hello}",
+            "This is a <link>!",
+            "<*linkable with markup*> here!",
+            "{:another_file:}",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
+    fn inline_verbatim() {
+        let examples: Vec<_> = [
+            "some text `inline verbatim`",
+            "`verbatim at start`",
+            "{/ some_link.txt}[with `inline verbatim` in anchor]",
+            "`*markup* /inside/ /-verbatim-/`",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
@@ -186,7 +268,6 @@ mod tests {
                 --- Test list
             ",
             "---not list",
-            // "- - a list item",
             "--> not a list",
         ]
         .into_iter()
@@ -287,7 +368,6 @@ mod tests {
                 >>> Test quote
             ",
             ">>>not quote",
-            // "> > a quote item",
             ">>- not a quote",
         ]
         .into_iter()
@@ -451,7 +531,6 @@ mod tests {
         fn infirm_tags_proptests(tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX) {
             let tag = format!(".{} {} {}\n", tag_name, parameter, multi_parameter);
 
-            // TODO: Ensure that the number of parameters parsed is correct?
             parse(&tag).unwrap();
         }
     }
@@ -574,8 +653,6 @@ mod tests {
 
     proptest! {
         #[test]
-        // NOTE: `.*` may at some point generate an `@end` purely by chance. There is a basic
-        // check against this, but this should probably be done as a filter in proptest.
         fn ranged_verbatim_tags_proptests(tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX, content in ".*") {
             if content.contains("@end") {
                 return Ok(());
@@ -638,8 +715,6 @@ mod tests {
 
     proptest! {
         #[test]
-        // NOTE: `.*` may at some point generate an `@end` purely by chance. There is a basic
-        // check against this, but this should probably be done as a filter in proptest.
         fn ranged_tags_proptests(tag_type in prop_oneof!["@", "|"], tag_name in TAG_NAME_REGEX, parameter in TAG_PARAMETER_REGEX, multi_parameter in TAG_MULTI_PARAMETER_REGEX, content in PARAGRAPH_REGEX) {
             if content.contains(format!("{}end", tag_type).as_str()) {
                 return Ok(());
@@ -666,78 +741,6 @@ mod tests {
 
              another paragraph
              here.",
-        ]
-        .into_iter()
-        .map(|example| example.to_string() + "\n")
-        .map(|str| parse(&str))
-        .try_collect()
-        .unwrap();
-
-        assert_yaml_snapshot!(examples);
-    }
-
-    proptest! {
-        #[test]
-        fn paragraphs_proptests(paragraph_content in PARAGRAPH_REGEX) {
-            parse(&paragraph_content).unwrap();
-        }
-    }
-
-    #[test]
-    fn modifiers() {
-        let examples: Vec<_> = [
-            "this *is* a test",
-            "hello, *world*!",
-            "*hello, world!*",
-            "*hello*, world!",
-            "*/hello/*, world!",
-            "*hi!* how are you?",
-            "this *is a test",
-            "this *is/ a test",
-            "this *is*/ a test",
-            "this */is/*/ a test",
-        ]
-        .into_iter()
-        .map(|example| example.to_string() + "\n")
-        .map(|str| parse(&str))
-        .try_collect()
-        .unwrap();
-
-        assert_yaml_snapshot!(examples);
-    }
-
-    #[test]
-    fn links() {
-        let examples: Vec<_> = [
-            "{https://github.com/nvim-neorg/neorg}",
-            "{$ hello!}",
-            "{/ a-path.txt}",
-            "{********* hello!}",
-            "{:/some/file:*** a -path-.txt}",
-            "[anchor]",
-            "[anchor][description]",
-            "{* hello}[description]",
-            "[description]{* hello}",
-            "This is a <link>!",
-            "<*linkable with markup*> here!",
-            "{:another_file:}",
-        ]
-        .into_iter()
-        .map(|example| example.to_string() + "\n")
-        .map(|str| parse(&str))
-        .try_collect()
-        .unwrap();
-
-        assert_yaml_snapshot!(examples);
-    }
-
-    #[test]
-    fn inline_verbatim() {
-        let examples: Vec<_> = [
-            "some text `inline verbatim`",
-            "`verbatim at start`",
-            "{/ some_link.txt}[with `inline verbatim` in anchor]",
-            "`*markup* /inside/ /-verbatim-/`",
         ]
         .into_iter()
         .map(|example| example.to_string() + "\n")
