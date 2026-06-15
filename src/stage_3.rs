@@ -164,7 +164,7 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
             |(((filepath, modifiers), content), description)| ParagraphSegment::Link {
                 filepath: filepath
                     .map(|content| content.into_iter().map_into::<String>().collect()),
-                description: description.map(|content| parse_paragraph(content)),
+                description: description.map(parse_paragraph),
                 targets: if let Some(content) = content {
                     vec![if let Some(modifiers) = modifiers {
                         match modifiers.as_str() {
@@ -216,7 +216,7 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
                 .then(anchor.clone().or_not())
                 .map(|(content, description)| ParagraphSegment::Anchor {
                     content: parse_paragraph(content),
-                    description: description.map(|content| parse_paragraph(content)),
+                    description: description.map(parse_paragraph),
                 }),
             inline_linkable,
             opening_modifier_candidate,
@@ -235,6 +235,7 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
@@ -642,7 +643,7 @@ pub fn stage_3<'src>(
             NorgBlock::NestableDetachedModifier { modifier_type: '-', level, extension_section } => (NestableDetachedModifier::UnorderedList, level, extension_section),
             NorgBlock::NestableDetachedModifier { modifier_type: '~', level, extension_section } => (NestableDetachedModifier::OrderedList, level, extension_section),
             NorgBlock::NestableDetachedModifier { modifier_type: '>', level, extension_section } => (NestableDetachedModifier::Quote, level, extension_section),
-        }.then(paragraph.clone()).map(|((modifier_type, level, extension_section), paragraph)| NorgASTFlat::NestableDetachedModifier {
+        }.then(paragraph).map(|((modifier_type, level, extension_section), paragraph)| NorgASTFlat::NestableDetachedModifier {
                 modifier_type,
                 level,
                 extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
@@ -653,7 +654,7 @@ pub fn stage_3<'src>(
             NorgBlock::RangeableDetachedModifier { modifier_type: '$', ranged: false, title, extension_section } => (RangeableDetachedModifier::Definition, title, extension_section),
             NorgBlock::RangeableDetachedModifier { modifier_type: '^', ranged: false, title, extension_section} => (RangeableDetachedModifier::Footnote, title, extension_section),
             NorgBlock::RangeableDetachedModifier { modifier_type: ':', ranged: false, title, extension_section } => (RangeableDetachedModifier::Table, title, extension_section),
-        }.then(paragraph.clone()).map(|((modifier_type, title, extension_section), paragraph)| NorgASTFlat::RangeableDetachedModifier {
+        }.then(paragraph).map(|((modifier_type, title, extension_section), paragraph)| NorgASTFlat::RangeableDetachedModifier {
                 modifier_type,
                 title: parse_paragraph(title),
                 extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),

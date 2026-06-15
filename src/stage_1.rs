@@ -61,7 +61,6 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
         .filter(|c: &char| *c == '\n' || *c == '\r' || c.is_separator_line() || c.is_separator_paragraph());
 
     let newline = parse_newline
-        .clone()
         .to(NorgToken::SingleNewline);
 
     let newlines = parse_newline

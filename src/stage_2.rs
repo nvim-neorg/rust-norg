@@ -59,9 +59,6 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
             Some(NorgToken::Newlines(_)) => Some(ParagraphSegmentToken::Whitespace),
             Some(NorgToken::Eof) => Some(ParagraphSegmentToken::Text(String::new())),
             None => None,
-            _x => {
-                unreachable!();
-            }
         })
         .collect()
 }
@@ -165,7 +162,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
     .map(|chars| chars.len() as u16)
     .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
     .then(extension_section.clone().or_not())
-    .then(paragraph_segment.clone())
+    .then(paragraph_segment)
     .then_ignore(newlines_or_eof)
     .map(|((level, extension_section), title)| NorgBlock::Heading {
         level,
@@ -224,7 +221,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .map(|chars| (chars[0], chars.len() == 2))
             .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
             .then(extension_section.clone().or_not())
-            .then(paragraph_segment.clone())
+            .then(paragraph_segment)
             .then_ignore(newlines_or_eof)
             .map(|(((modifier_type, ranged), extension_section), title)| {
                 NorgBlock::RangeableDetachedModifier {
@@ -259,7 +256,6 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .filter(move |tok: &NorgToken| !matches!(tok, NorgToken::Newlines(_) | NorgToken::SingleNewline | NorgToken::Whitespace(_) | NorgToken::Eof | NorgToken::End(_) if matches!(tok, NorgToken::End(x) if *x == c)));
 
         let tag_parameters = not_tag_end_or_ws
-            .clone()
             .repeated()
             .at_least(1)
             .collect::<Vec<_>>()
@@ -310,7 +306,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
                     .repeated()
                     .at_least(1)
                     .collect::<Vec<_>>()
-                    .ignore_then(parameters.clone())
+                    .ignore_then(parameters)
                     .or_not(),
             )
             .then_ignore(select! {
@@ -337,7 +333,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
                     .repeated()
                     .at_least(1)
                     .collect::<Vec<_>>()
-                    .ignore_then(parameters.clone())
+                    .ignore_then(parameters)
                     .or_not(),
             )
             .then_ignore(select! {
@@ -415,7 +411,6 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         carryover_tags,
         tag_end,
         paragraph_segment
-            .clone()
             .then(newlines_or_eof.repeated().at_least(1).collect::<Vec<_>>().rewind())
             .map(|(content, trailing)| match trailing.last().unwrap() {
                 NorgToken::Eof => {
