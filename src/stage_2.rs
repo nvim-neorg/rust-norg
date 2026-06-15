@@ -2,12 +2,11 @@
 
 use std::fmt::Write as _;
 
-use chumsky::Parser;
+use chumsky::prelude::*;
 use itertools::Itertools;
 use serde::Serialize;
 
 use crate::stage_1::NorgToken;
-use chumsky::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum ParagraphSegmentToken {
@@ -57,6 +56,8 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
                 Some(ParagraphSegmentToken::Text(result))
             },
             Some(NorgToken::End(x)) => Some(ParagraphSegmentToken::Text(format!("{x}end"))),
+            Some(NorgToken::Newlines(_)) => Some(ParagraphSegmentToken::Whitespace),
+            Some(NorgToken::Eof) => Some(ParagraphSegmentToken::Text(String::new())),
             None => None,
             _x => {
                 unreachable!();
@@ -68,68 +69,50 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
 /// Represents various Norg blocks parsed from tokens.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub enum NorgBlock {
-    /// A segment of a paragraph consisting of Norg tokens.
     ParagraphSegment(ParagraphTokenList),
-    /// End of a paragraph segment.
     ParagraphSegmentEnd(ParagraphTokenList),
-    /// A heading with a specified level, title, and optional extension section.
     Heading {
         level: u16,
         title: ParagraphTokenList,
         extension_section: ParagraphTokenList,
     },
-    /// A nestable detached modifier with a type, level, and optional extension section.
     NestableDetachedModifier {
         modifier_type: char,
         level: u16,
         extension_section: ParagraphTokenList,
     },
-    /// A rangeable detached modifier with an indication if it is ranged, type, title, and optional extension section.
     RangeableDetachedModifier {
         ranged: bool,
         modifier_type: char,
         title: ParagraphTokenList,
         extension_section: ParagraphTokenList,
     },
-    /// Closing tag for a rangeable detached modifier.
     RangeableDetachedModifierClose(char),
-    /// A ranged tag with a type, name, and optional parameters.
     RangedTag {
         tag_type: char,
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
     },
-    /// End of a ranged tag.
     RangedTagEnd(char),
-    /// A verbatim ranged tag with a name, optional parameters, and content.
     VerbatimRangedTag {
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
         content: Vec<NorgToken>,
     },
-    /// An infirm tag with a name and optional parameters.
     InfirmTag {
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
     },
-    /// A carryover tag with a type, name, and optional parameters.
     CarryoverTag {
         tag_type: char,
         name: ParagraphTokenList,
         parameters: Option<Vec<ParagraphTokenList>>,
     },
-    /// A delimiting modifier, defined by a single char `-` (weak), `=` (string), or `_` (horizontal rule)
     DelimitingModifier(char),
 }
 
 /// Defines the parser for stage 2 of the Norg parsing process, which converts tokens into blocks.
-///
-/// # Returns
-///
-/// * A parser that processes `NorgToken`s into a vector of `NorgBlock`s, which properly define
-///   paragraph boundaries.
-pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::error::Simple<NorgToken>>
-{
+pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, extra::Err<Rich<'src, NorgToken>>> {
     use NorgToken::*;
 
     let whitespace = select! { Whitespace(_) => () };
@@ -146,42 +129,43 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         Whitespace(_) => (),
     };
 
-    let newlines_whitespace_or_eof = select! {
-        Newlines(_) => (),
-        SingleNewline => (),
-        Whitespace(_) => (),
-        Eof => (),
-    };
+    let not_newlines_or_eof = any()
+        .filter(|tok: &NorgToken| !matches!(tok, NorgToken::SingleNewline | NorgToken::Newlines(_) | NorgToken::Eof));
 
-    let paragraph_segment = newlines_or_eof.not().repeated().at_least(1);
+    let not_newlines_ws_or_eof = any()
+        .filter(|tok: &NorgToken| !matches!(tok, NorgToken::Newlines(_) | NorgToken::SingleNewline | NorgToken::Whitespace(_) | NorgToken::Eof));
 
-    let extension_section = select! {
-        SingleNewline => (),
-        Newlines(_) => (),
-        Eof => (),
-        Special(')') => (),
-    }
-    .not()
-    .repeated()
-    .at_least(1)
-    .delimited_by(just(Special('(')), just(Special(')')));
+    let not_newlines_ws_or_eof_or_close_paren = any()
+        .filter(|tok: &NorgToken| !matches!(tok, NorgToken::SingleNewline | NorgToken::Newlines(_) | NorgToken::Eof | NorgToken::Special(')')));
 
-    let parameters = newlines_whitespace_or_eof
-        .not()
+    let paragraph_segment = not_newlines_or_eof
         .repeated()
         .at_least(1)
-        .separated_by(whitespace.repeated().at_least(1));
+        .collect::<Vec<_>>();
+
+    let extension_section = not_newlines_ws_or_eof_or_close_paren
+        .repeated()
+        .at_least(1)
+        .collect::<Vec<_>>()
+        .delimited_by(just(Special('(')), just(Special(')')));
+
+    let parameters = not_newlines_ws_or_eof
+        .repeated()
+        .at_least(1)
+        .collect::<Vec<_>>()
+        .separated_by(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+        .collect::<Vec<_>>();
 
     let heading = select! {
         Special('*') => (),
     }
-    .ignored()
     .repeated()
     .at_least(1)
+    .collect::<Vec<_>>()
     .map(|chars| chars.len() as u16)
-    .then_ignore(whitespace.repeated().at_least(1))
+    .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
     .then(extension_section.clone().or_not())
-    .then(paragraph_segment)
+    .then(paragraph_segment.clone())
     .then_ignore(newlines_or_eof)
     .map(|((level, extension_section), title)| NorgBlock::Heading {
         level,
@@ -197,27 +181,30 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     }
     .repeated()
     .at_least(1)
+    .collect::<Vec<_>>()
     .try_map(|chars, span| {
         if chars.iter().all_equal() {
             Ok((chars[0], chars.len() as u16))
         } else {
-            // Get the type of element that the user tried to create.
             let modifier_type = match chars[0] {
                 '-' => "unordered list",
                 '~' => "ordered list",
                 '>' => "quote",
                 _ => unreachable!(),
             };
-            Err(Simple::custom(
+            Err(Rich::custom(
                 span,
-                format!("
+                format!(
+                    "
                     Expected a sequence of '{}' characters when creating {}.
                     Norg does not permit mixing of modifiers, e.g. `-~>`. Keep all your modifiers the same, e.g. `---`.
-                ", chars[0], modifier_type),
+                ",
+                    chars[0], modifier_type
+                ),
             ))
         }
     })
-    .then_ignore(whitespace.repeated().at_least(1))
+    .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
     .then(extension_section.clone().or_not())
     .map(
         |((modifier_type, level), extension_section)| NorgBlock::NestableDetachedModifier {
@@ -233,10 +220,11 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             .repeated()
             .at_least(1)
             .at_most(2)
+            .collect::<Vec<_>>()
             .map(|chars| (chars[0], chars.len() == 2))
-            .then_ignore(whitespace.repeated().at_least(1))
+            .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
             .then(extension_section.clone().or_not())
-            .then(paragraph_segment)
+            .then(paragraph_segment.clone())
             .then_ignore(newlines_or_eof)
             .map(|(((modifier_type, ranged), extension_section), title)| {
                 NorgBlock::RangeableDetachedModifier {
@@ -267,30 +255,36 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                 End(x) if x == c => x,
         };
 
-        let tag_parameters = select! {
-            Newlines(_) => (),
-            SingleNewline => (),
-            Whitespace(_) => (),
-            Eof => (),
-            End(x) if x == c => ()
-        }
-        .not()
-        .repeated()
-        .at_least(1)
-        .separated_by(whitespace.repeated().at_least(1));
+        let not_tag_end_or_ws = any()
+            .filter(move |tok: &NorgToken| !matches!(tok, NorgToken::Newlines(_) | NorgToken::SingleNewline | NorgToken::Whitespace(_) | NorgToken::Eof | NorgToken::End(_) if matches!(tok, NorgToken::End(x) if *x == c)));
+
+        let tag_parameters = not_tag_end_or_ws
+            .clone()
+            .repeated()
+            .at_least(1)
+            .collect::<Vec<_>>()
+            .separated_by(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+
+        let verbatim_content = any()
+            .filter(move |tok: &NorgToken| !matches!(tok, NorgToken::End(ref x) if *x == c))
+            .repeated()
+            .collect::<Vec<_>>()
+            .or_not();
 
         parse_char
-            .ignore_then(newlines_whitespace_or_eof.not().repeated().at_least(1))
+            .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
                 whitespace
                     .repeated()
                     .at_least(1)
+                    .collect::<Vec<_>>()
                     .ignore_then(tag_parameters)
                     .or_not(),
             )
             .then_ignore(just(SingleNewline).or_not())
-            .then_ignore(filter(|c| matches!(c, Newlines(_))).or_not())
-            .then(tag_end.not().repeated().or_not())
+            .then_ignore(any().filter(|tok: &NorgToken| matches!(tok, Newlines(_))).or_not())
+            .then(verbatim_content)
             .then_ignore(tag_end)
             .map(
                 |((name, parameters), content)| NorgBlock::VerbatimRangedTag {
@@ -301,7 +295,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
                             .map(tokens_to_paragraph_segment)
                             .collect()
                     }),
-                    content: content.unwrap_or(vec![]),
+                    content: content.unwrap_or_default(),
                 },
             )
     };
@@ -310,12 +304,13 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         let parse_char = select! { Special(x) if x == c => x };
 
         parse_char
-            .ignore_then(newlines_whitespace_or_eof.not().repeated().at_least(1))
+            .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .collect::<Vec<_>>()
+                    .ignore_then(parameters.clone())
                     .or_not(),
             )
             .then_ignore(select! {
@@ -336,12 +331,13 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
 
     let infirm_tag = {
         select! { Special('.') => '.' }
-            .ignore_then(newlines_whitespace_or_eof.not().repeated().at_least(1))
+            .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .ignore_then(parameters)
+                    .collect::<Vec<_>>()
+                    .ignore_then(parameters.clone())
                     .or_not(),
             )
             .then_ignore(select! {
@@ -364,11 +360,12 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
             Special('+') => '+',
             Special('#') => '#',
         }
-        .then(newlines_whitespace_or_eof.not().repeated().at_least(1))
+        .then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
         .then(
             whitespace
                 .repeated()
                 .at_least(1)
+                .collect::<Vec<_>>()
                 .ignore_then(parameters)
                 .or_not(),
         )
@@ -397,6 +394,7 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     }
     .repeated()
     .at_least(2)
+    .collect::<Vec<_>>()
     .then_ignore(newlines_or_eof)
     .map(|chars| NorgBlock::DelimitingModifier(chars[0]));
 
@@ -417,7 +415,8 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
         carryover_tags,
         tag_end,
         paragraph_segment
-            .then(newlines_or_eof.repeated().at_least(1).rewind())
+            .clone()
+            .then(newlines_or_eof.repeated().at_least(1).collect::<Vec<_>>().rewind())
             .map(|(content, trailing)| match trailing.last().unwrap() {
                 NorgToken::Eof => {
                     NorgBlock::ParagraphSegmentEnd(tokens_to_paragraph_segment(content))
@@ -434,5 +433,6 @@ pub fn stage_2() -> impl Parser<NorgToken, Vec<NorgBlock>, Error = chumsky::erro
     ))
     .padded_by(newlines_whitespace.repeated())
     .repeated()
+    .collect::<Vec<_>>()
     .then_ignore(just(Eof))
 }

@@ -43,10 +43,10 @@ fn stage_1_bench(c: &mut Criterion) {
 fn stage_2_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("stage_2");
     for (name, input) in [("small", SMALL), ("medium", MEDIUM), ("large", LARGE)] {
-        let tokens = stage_1().parse(input).unwrap();
+        let tokens = stage_1().parse(input).into_result().unwrap();
         group.throughput(Throughput::Elements(tokens.len() as u64));
         group.bench_with_input(BenchmarkId::from_parameter(name), &tokens, |b, tokens| {
-            b.iter(|| stage_2().parse(black_box(tokens.clone())).unwrap())
+            b.iter(|| stage_2().parse(black_box(tokens.as_slice())).into_result().unwrap())
         });
     }
     group.finish();
@@ -55,11 +55,11 @@ fn stage_2_bench(c: &mut Criterion) {
 fn stage_3_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("stage_3");
     for (name, input) in [("small", SMALL), ("medium", MEDIUM), ("large", LARGE)] {
-        let tokens = stage_1().parse(input).unwrap();
-        let blocks = stage_2().parse(tokens).unwrap();
+        let tokens = stage_1().parse(input).into_result().unwrap();
+        let blocks = stage_2().parse(tokens.as_slice()).into_result().unwrap();
         group.throughput(Throughput::Elements(blocks.len() as u64));
         group.bench_with_input(BenchmarkId::from_parameter(name), &blocks, |b, blocks| {
-            b.iter(|| stage_3().parse(black_box(blocks.clone())).unwrap())
+            b.iter(|| stage_3().parse(black_box(blocks.as_slice())).into_result().unwrap())
         });
     }
     group.finish();
@@ -79,7 +79,7 @@ fn stage_4_bench(c: &mut Criterion) {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().sample_size(50);
+    config = Criterion::default();
     targets = parse_tree_bench,
         parse_flat_bench,
         stage_1_bench,
