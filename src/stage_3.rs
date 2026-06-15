@@ -235,19 +235,28 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
     })
 }
 
-#[allow(clippy::result_large_err)]
 fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
-    input
-        .into_iter()
-        .coalesce(|prev, next| match (prev.clone(), next.clone()) {
+    let mut iter = input.into_iter();
+    let Some(mut prev) = iter.next() else {
+        return vec![];
+    };
+    let mut result = Vec::with_capacity(1);
+    for next in iter {
+        match (&prev, &next) {
             (AttachedModifierOpener(_), AttachedModifierOpener(data)) => {
-                Err((prev, AttachedModifierOpenerFail(data)))
+                result.push(prev);
+                prev = AttachedModifierOpenerFail(data.clone());
             }
-            _ => Err((prev, next)),
-        })
-        .collect()
+            _ => {
+                result.push(prev);
+                prev = next;
+            }
+        }
+    }
+    result.push(prev);
+    result
 }
 
 fn paragraph_parser_closer_candidates<'a>(
@@ -374,31 +383,6 @@ fn paragraph_rollup_candidates<'a>(
     choice((attached_modifier, any())).repeated().at_least(1).collect::<Vec<_>>()
 }
 
-fn eliminate_invalid_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
-    input
-        .into_iter()
-        .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
-            match segment {
-                ParagraphSegment::AttachedModifierCandidate {
-                    modifier_type,
-                    content,
-                    closer,
-                } => {
-                    acc.push(ParagraphSegment::Token(ParagraphSegmentToken::Special(
-                        modifier_type,
-                    )));
-                    acc.extend(content);
-
-                    if let Some(closer) = closer {
-                        acc.push(*closer);
-                    }
-                }
-                _ => acc.push(segment),
-            };
-
-            acc
-        })
-}
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum LinkTarget {
@@ -488,7 +472,21 @@ fn parse_paragraph(
         .into_result()
         .unwrap();
 
-    eliminate_invalid_candidates(unravel_candidates(stage3_result))
+    use ParagraphSegment::*;
+    stage3_result
+        .into_iter()
+        .fold(Vec::new(), |mut acc, segment| {
+            match segment {
+                t @ Token(_) => acc.push(t),
+                AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
+                AttachedModifierCandidate { modifier_type, content, .. } => {
+                    acc.push(Token(ParagraphSegmentToken::Special(modifier_type)));
+                    acc.extend(content);
+                }
+                other => acc.push(other),
+            };
+            acc
+        })
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq, Serialize)]

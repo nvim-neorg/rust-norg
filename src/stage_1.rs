@@ -3,7 +3,7 @@
 use std::fmt::Write as _;
 
 use chumsky::prelude::*;
-use chumsky::text::{keyword, Char};
+use chumsky::text::Char;
 use serde::Serialize;
 use unicode_categories::UnicodeCategories;
 
@@ -14,6 +14,7 @@ pub enum NorgToken {
     SingleNewline,
     Newlines(u16),
     Regular(char),
+    Text(String),
     Special(char),
     Escape(char),
     End(char),
@@ -29,6 +30,7 @@ impl std::fmt::Display for NorgToken {
             Self::Newlines(count) => f.write_str(&"\n".repeat(*count as usize)),
             Self::Regular(c) | Self::Special(c) => f.write_char(*c),
             Self::SingleNewline => f.write_char('\n'),
+            Self::Text(s) => f.write_str(s),
             Self::Whitespace(count) => f.write_str(&" ".repeat(*count as usize)),
         }
     }
@@ -43,46 +45,108 @@ impl From<NorgToken> for String {
 /// A list of characters which are considered "special", i.e. for parsing of attached modifiers.
 const SPECIAL_CHARS: &str = "*-~/_!%^,\"'`$:@|=.#+<>()[]{}\\";
 
-/// List of chars that proceed "end" tags
-const TAG_CHARS: &str = "|@=";
+/// List of chars that proceed "end" tags are handled inline in the is_tag_char check.
+
+fn coalesce_regular_chars(mut tokens: Vec<NorgToken>) -> Vec<NorgToken> {
+    let mut result = Vec::with_capacity(tokens.len());
+    let mut text_buf = String::new();
+    for token in tokens.drain(..) {
+        match token {
+            NorgToken::Regular(c) => {
+                text_buf.push(c);
+            }
+            other => {
+                if !text_buf.is_empty() {
+                    result.push(NorgToken::Text(std::mem::take(&mut text_buf)));
+                }
+                result.push(other);
+            }
+        }
+    }
+    if !text_buf.is_empty() {
+        result.push(NorgToken::Text(text_buf));
+    }
+    result
+}
 
 /// Parses a `.norg` document and breaks it up into tokens.
 pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Err<Rich<'src, char>>> {
-    let ws = any::<_, extra::Err<Rich<char>>>()
-        .filter(|c: &char| c.is_inline_whitespace() || c.is_separator_space())
-        .repeated()
-        .at_least(1)
-        .collect::<String>()
-        .map(|s| NorgToken::Whitespace(s.len() as u16));
+    custom::<'src, _, &'src str, Vec<NorgToken>, extra::Err<Rich<'src, char>>>(|inp| {
+        let is_whitespace = |c: char| c.is_inline_whitespace() || c.is_separator_space();
+        let is_newline =
+            |c: char| c == '\n' || c == '\r' || c.is_separator_line() || c.is_separator_paragraph();
+        let is_tag_char = |c: char| matches!(c, '|' | '@' | '=');
 
-    let character = any::<_, extra::Err<Rich<char>>>().map(NorgToken::Regular);
+        let mut tokens = Vec::new();
 
-    let parse_newline = any::<_, extra::Err<Rich<char>>>()
-        .filter(|c: &char| *c == '\n' || *c == '\r' || c.is_separator_line() || c.is_separator_paragraph());
+        loop {
+            let Some(c) = inp.next() else {
+                tokens.push(NorgToken::Eof);
+                return Ok(tokens);
+            };
 
-    let newline = parse_newline
-        .to(NorgToken::SingleNewline);
+            if is_tag_char(c) {
+                let saved = inp.save();
 
-    let newlines = parse_newline
-        .repeated()
-        .at_least(2)
-        .collect::<String>()
-        .map(|s| NorgToken::Newlines(s.len() as u16));
+                let is_end = inp.peek() == Some('e')
+                    && { inp.next(); inp.peek() == Some('n') }
+                    && { inp.next(); inp.peek() == Some('d') };
 
-    let special = one_of(SPECIAL_CHARS).map(NorgToken::Special);
+                let mut is_tag_end = false;
+                if is_end {
+                    inp.next();
+                    let after = inp.peek();
+                    is_tag_end = after.map_or(true, |nc| is_newline(nc));
+                }
 
-    let escape = just('\\').ignore_then(any()).map(NorgToken::Escape);
+                if is_tag_end {
+                    tokens.push(NorgToken::End(c));
+                    continue;
+                }
+                inp.rewind(saved);
+            }
 
-    let tag_end = one_of(TAG_CHARS)
-        .then_ignore(keyword("end"))
-        .then_ignore(choice((one_of("\n\r").rewind().map(|_| ()), end())))
-        .map(NorgToken::End);
+            if c == '\\' {
+                if let Some(escaped) = inp.next() {
+                    tokens.push(NorgToken::Escape(escaped));
+                } else {
+                    tokens.push(NorgToken::Special('\\'));
+                }
+                continue;
+            }
 
-    let tokens = choice((tag_end, escape, special, newlines, newline, ws, character))
-        .repeated()
-        .collect::<Vec<_>>();
+            if is_newline(c) {
+                let mut count = 1u16;
+                while inp.peek().map_or(false, |nc| is_newline(nc)) {
+                    inp.next();
+                    count += 1;
+                }
+                if count == 1 {
+                    tokens.push(NorgToken::SingleNewline);
+                } else {
+                    tokens.push(NorgToken::Newlines(count));
+                }
+                continue;
+            }
 
-    tokens
-        .then(end().to(NorgToken::Eof))
-        .map(|(mut v, eof)| { v.push(eof); v })
+            if is_whitespace(c) {
+                let mut count = 1u16;
+                while inp.peek().map_or(false, |nc| is_whitespace(nc)) {
+                    inp.next();
+                    count += 1;
+                }
+                tokens.push(NorgToken::Whitespace(count));
+                continue;
+            }
+
+            if SPECIAL_CHARS.contains(c) {
+                tokens.push(NorgToken::Special(c));
+                continue;
+            }
+
+            // Regular character, will be coalesced into Text runs at the end
+            tokens.push(NorgToken::Regular(c));
+        }
+    })
+    .map(coalesce_regular_chars)
 }

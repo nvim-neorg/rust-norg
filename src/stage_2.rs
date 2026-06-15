@@ -45,6 +45,7 @@ fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
             }
             Some(NorgToken::Special(c)) => Some(ParagraphSegmentToken::Special(c)),
             Some(NorgToken::Escape(c)) => Some(ParagraphSegmentToken::Escape(c)),
+            Some(NorgToken::Text(s)) => Some(ParagraphSegmentToken::Text(s)),
             Some(NorgToken::Regular(c)) => {
                 let mut result: String = it
                     .peeking_take_while(|token| matches!(token, NorgToken::Regular(_)))
@@ -150,7 +151,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         .repeated()
         .at_least(1)
         .collect::<Vec<_>>()
-        .separated_by(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+        .separated_by(whitespace.repeated().at_least(1).ignored())
         .collect::<Vec<_>>();
 
     let heading = select! {
@@ -160,7 +161,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
     .at_least(1)
     .collect::<Vec<_>>()
     .map(|chars| chars.len() as u16)
-    .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+    .then_ignore(whitespace.repeated().at_least(1).ignored())
     .then(extension_section.clone().or_not())
     .then(paragraph_segment)
     .then_ignore(newlines_or_eof)
@@ -201,7 +202,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             ))
         }
     })
-    .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+    .then_ignore(whitespace.repeated().at_least(1).ignored())
     .then(extension_section.clone().or_not())
     .map(
         |((modifier_type, level), extension_section)| NorgBlock::NestableDetachedModifier {
@@ -219,7 +220,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .at_most(2)
             .collect::<Vec<_>>()
             .map(|chars| (chars[0], chars.len() == 2))
-            .then_ignore(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+            .then_ignore(whitespace.repeated().at_least(1).ignored())
             .then(extension_section.clone().or_not())
             .then(paragraph_segment)
             .then_ignore(newlines_or_eof)
@@ -253,13 +254,13 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         };
 
         let not_tag_end_or_ws = any()
-            .filter(move |tok: &NorgToken| !matches!(tok, NorgToken::Newlines(_) | NorgToken::SingleNewline | NorgToken::Whitespace(_) | NorgToken::Eof | NorgToken::End(_) if matches!(tok, NorgToken::End(x) if *x == c)));
+            .filter(move |tok: &NorgToken| !matches!(tok, NorgToken::Newlines(_) | NorgToken::SingleNewline | NorgToken::Whitespace(_) | NorgToken::Eof) && !matches!(tok, NorgToken::End(x) if *x == c));
 
         let tag_parameters = not_tag_end_or_ws
             .repeated()
             .at_least(1)
             .collect::<Vec<_>>()
-            .separated_by(whitespace.repeated().at_least(1).collect::<Vec<_>>())
+            .separated_by(whitespace.repeated().at_least(1).ignored())
             .collect::<Vec<_>>();
 
         let verbatim_content = any()
@@ -274,7 +275,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .collect::<Vec<_>>()
+                    .ignored()
                     .ignore_then(tag_parameters)
                     .or_not(),
             )
@@ -305,7 +306,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .collect::<Vec<_>>()
+                    .ignored()
                     .ignore_then(parameters)
                     .or_not(),
             )
@@ -332,7 +333,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
                 whitespace
                     .repeated()
                     .at_least(1)
-                    .collect::<Vec<_>>()
+                    .ignored()
                     .ignore_then(parameters)
                     .or_not(),
             )
@@ -359,10 +360,10 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         .then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
         .then(
             whitespace
-                .repeated()
-                .at_least(1)
-                .collect::<Vec<_>>()
-                .ignore_then(parameters)
+                    .repeated()
+                    .at_least(1)
+                    .ignored()
+                    .ignore_then(parameters)
                 .or_not(),
         )
         .then_ignore(select! {
