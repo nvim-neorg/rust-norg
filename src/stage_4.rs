@@ -126,17 +126,17 @@ fn convert(flat: NorgASTFlat) -> NorgAST {
     }
 }
 
-fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: &mut usize) -> Vec<NorgAST> {
+fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: usize) -> (Vec<NorgAST>, usize) {
     let mut heading_level = *start_level as i16;
     let mut content = vec![];
     let mut seen = false;
-    for j in (*i + 1)..flat.len() {
+    let mut result_i = flat.len();
+    for j in (i + 1)..flat.len() {
         match &flat[j] {
             NorgASTFlat::Heading { level, .. } => {
                 if level <= start_level {
-                    // stop.
-                    content = stage_4(flat[(*i + 1)..j].to_vec());
-                    *i = j - 1;
+                    content = stage_4_from(&flat[(i + 1)..j]);
+                    result_i = j - 1;
                     seen = true;
                     break;
                 } else {
@@ -146,15 +146,15 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: &mut usiz
             NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak) => {
                 heading_level -= 1;
                 if heading_level < *start_level as i16 {
-                    content = stage_4(flat[(*i + 1)..j].to_vec());
-                    *i = j;
+                    content = stage_4_from(&flat[(i + 1)..j]);
+                    result_i = j;
                     seen = true;
                     break;
                 }
             }
             NorgASTFlat::DelimitingModifier(DelimitingModifier::Strong) => {
-                content = stage_4(flat[(*i + 1)..j].to_vec());
-                *i = j;
+                content = stage_4_from(&flat[(i + 1)..j]);
+                result_i = j;
                 seen = true;
                 break;
             }
@@ -163,9 +163,8 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: &mut usiz
             {
                 if let NorgASTFlat::Heading { level, .. } = **next_object {
                     if level <= *start_level {
-                        // stop.
-                        content = stage_4(flat[(*i + 1)..j].to_vec());
-                        *i = j - 1;
+                        content = stage_4_from(&flat[(i + 1)..j]);
+                        result_i = j - 1;
                         seen = true;
                         break;
                     } else {
@@ -179,10 +178,9 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: &mut usiz
         }
     }
     if !seen {
-        content = stage_4(flat[*i + 1..].to_vec());
-        *i = flat.len();
+        content = stage_4_from(&flat[i + 1..]);
     }
-    content
+    (content, result_i)
 }
 
 /// Loop over the given flat tree from the given index `i` until a non-NestableDetachedModifier is
@@ -195,21 +193,16 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: &mut usiz
 fn consume_nestable_detached_mod_content(
     start_level: &u16,
     flat: &[NorgASTFlat],
-    i: &mut usize,
+    i: usize,
     list_type: NestableDetachedModifier,
-) -> Vec<NorgAST> {
-    let mut content = vec![];
-    for j in (*i + 1)..flat.len() {
+) -> (Vec<NorgAST>, usize) {
+    for j in (i + 1)..flat.len() {
         match &flat[j] {
             NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } => {
                 if *modifier_type != list_type || level <= start_level {
-                    content = stage_4(flat[(*i + 1)..j].to_vec());
-                    *i = j - 1;
-                    break;
+                    return (stage_4_from(&flat[(i + 1)..j]), j - 1);
                 } else if j == flat.len() - 1 {
-                    content = stage_4(flat[(*i + 1)..].to_vec());
-                    *i = j + 1;
-                    break;
+                    return (stage_4_from(&flat[(i + 1)..]), j + 1);
                 }
             }
             NorgASTFlat::CarryoverTag { next_object, .. }
@@ -217,32 +210,23 @@ fn consume_nestable_detached_mod_content(
             {
                 if let NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } = **next_object {
                     if modifier_type != list_type || level <= *start_level {
-                        content = stage_4(flat[(*i + 1)..j].to_vec());
-                        *i = j - 1;
-                        break;
+                        return (stage_4_from(&flat[(i + 1)..j]), j - 1);
                     } else if j == flat.len() - 1 {
-                        content = stage_4(flat[(*i + 1)..].to_vec());
-                        *i = j + 1;
-                        break;
+                        return (stage_4_from(&flat[(i + 1)..]), j + 1);
                     }
                 } else {
                     unreachable!()
                 }
             }
             _ => {
-                content = stage_4(flat[(*i + 1)..j].to_vec());
-                *i = j - 1;
-                // stop immediately if we see something that's not a NestableDetachedModifier
-                // of lesser level
-                break;
+                return (stage_4_from(&flat[(i + 1)..j]), j - 1);
             }
         }
     }
-
-    content
+    (vec![], flat.len())
 }
 
-pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
+fn stage_4_from(flat: &[NorgASTFlat]) -> Vec<NorgAST> {
     let mut ast = vec![];
     let mut i = 0;
     while i < flat.len() {
@@ -253,14 +237,15 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                 title,
                 extensions,
             } => {
-                let content = consume_heading_content(start_level, &flat, &mut i);
+                let (content, new_i) = consume_heading_content(start_level, flat, i);
 
                 ast.push(NorgAST::Heading {
                     level: *start_level,
                     title: title.to_vec(),
                     extensions: extensions.to_vec(),
                     content,
-                })
+                });
+                i = new_i;
             }
             NorgASTFlat::CarryoverTag {
                 tag_type,
@@ -274,7 +259,7 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                         title,
                         extensions,
                     } => {
-                        let content = consume_heading_content(&level, &flat, &mut i);
+                        let (content, new_i) = consume_heading_content(&level, flat, i);
                         ast.push(NorgAST::CarryoverTag {
                             tag_type: tag_type.clone(),
                             name: name.to_vec(),
@@ -285,7 +270,10 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                                 extensions,
                                 content,
                             }),
-                        })
+                        });
+                        i = new_i;
+                        i += 1;
+                        continue;
                     }
                     NorgASTFlat::NestableDetachedModifier {
                         modifier_type,
@@ -293,8 +281,8 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                         extensions,
                         content,
                     } => {
-                        let new_content =
-                            consume_nestable_detached_mod_content(&level, &flat, &mut i, modifier_type);
+                        let (new_content, new_i) =
+                            consume_nestable_detached_mod_content(&level, flat, i, modifier_type);
                         ast.push(NorgAST::CarryoverTag {
                             tag_type: tag_type.clone(),
                             name: name.to_vec(),
@@ -306,7 +294,10 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                                 text: content,
                                 content: new_content,
                             }),
-                        })
+                        });
+                        i = new_i;
+                        i += 1;
+                        continue;
                     }
                     _ => {
                         ast.push(convert(item.clone()))
@@ -319,7 +310,7 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                 extensions,
                 content: text,
             } => {
-                let content = consume_nestable_detached_mod_content(start_level, &flat, &mut i, *modifier_type);
+                let (content, new_i) = consume_nestable_detached_mod_content(start_level, flat, i, *modifier_type);
                 let parsed = NorgAST::NestableDetachedModifier {
                     modifier_type: *modifier_type,
                     level: *start_level,
@@ -327,6 +318,7 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
                     text: text.clone(),
                     content,
                 };
+                i = new_i;
                 if !ast.is_empty() {
                     let len = ast.len();
                     if let NorgAST::List { modifier_type: list_modifier, ref mut items } = ast[len - 1] {
@@ -348,4 +340,8 @@ pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
     }
 
     ast
+}
+
+pub fn stage_4(flat: Vec<NorgASTFlat>) -> Vec<NorgAST> {
+    stage_4_from(&flat)
 }
