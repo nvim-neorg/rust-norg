@@ -684,6 +684,30 @@ mod tests {
     }
 
     #[test]
+    fn verbatim_after_attached_modifier() {
+        let examples: Vec<_> = [
+            // An inline verbatim opening immediately after an attached
+            // modifier: tree-sitter-norg reads these as underline(verbatim).
+            "_`Tree`_",
+            "*`Tree`*",
+            "_`a *b* c`_",
+            // Several verbatims inside one modifier must pair up in order.
+            "_`a` and `b`_",
+            // Unchanged cases, kept here so a regression is obvious.
+            "_x `y` z_",
+            "`Tree`",
+            "_*Tree*_",
+        ]
+        .into_iter()
+        .map(|example| example.to_string() + "\n")
+        .map(|str| parse(&str))
+        .try_collect()
+        .unwrap();
+
+        assert_yaml_snapshot!(examples);
+    }
+
+    #[test]
     fn modifiers() {
         let examples: Vec<_> = [
             "this *is* a test",
