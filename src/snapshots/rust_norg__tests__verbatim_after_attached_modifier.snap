@@ -1,0 +1,64 @@
+---
+source: src/lib.rs
+expression: examples
+---
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: _
+          content:
+            - InlineVerbatim:
+                - Text: Tree
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: "*"
+          content:
+            - InlineVerbatim:
+                - Text: Tree
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: _
+          content:
+            - InlineVerbatim:
+                - Text: a
+                - Whitespace
+                - Special: "*"
+                - Text: b
+                - Special: "*"
+                - Whitespace
+                - Text: c
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: _
+          content:
+            - InlineVerbatim:
+                - Text: a
+            - Token: Whitespace
+            - Token:
+                Text: and
+            - Token: Whitespace
+            - InlineVerbatim:
+                - Text: b
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: _
+          content:
+            - Token:
+                Text: x
+            - Token: Whitespace
+            - InlineVerbatim:
+                - Text: y
+            - Token: Whitespace
+            - Token:
+                Text: z
+- - Paragraph:
+      - InlineVerbatim:
+          - Text: Tree
+- - Paragraph:
+      - AttachedModifier:
+          modifier_type: _
+          content:
+            - AttachedModifier:
+                modifier_type: "*"
+                content:
+                  - Token:
+                      Text: Tree

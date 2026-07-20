@@ -7,6 +7,9 @@ use textwrap::dedent;
 
 use crate::stage_2::{NorgBlock, ParagraphSegmentToken, ParagraphTokenList};
 
+/// The inline-verbatim delimiter.
+const VERBATIM: char = '`';
+
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq, Serialize)]
 pub enum NestableDetachedModifier {
     Quote,
@@ -119,9 +122,22 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
         s @ ParagraphSegmentToken::Special(_) => s,
     };
 
+    // An attached modifier may be immediately followed by an inline verbatim
+    // (`` _`Tree`_ ``, which tree-sitter-norg reads as underline(verbatim)).
+    // The generic branch *consumes* the token it checks, which swallowed the
+    // opening backtick so `inline_verbatim` below could never claim it — and
+    // with several verbatims on one line it shifted the pairing. Peek instead
+    // of consuming for '`' only, leaving every other case byte-identical.
+    let opener_rhs = || {
+        choice((
+            just(ParagraphSegmentToken::Special(VERBATIM)).rewind(),
+            just(ParagraphSegmentToken::Whitespace).not(),
+        ))
+    };
+
     let opening_modifier_candidate = whitespace_or_special
         .then(modifier.repeated().at_least(1))
-        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .then(opener_rhs())
         .map(|((left, modifiers), right)| {
             ParagraphSegment::AttachedModifierOpener((Some(left), modifiers, right))
         });
@@ -129,7 +145,7 @@ fn paragraph_parser_opener_candidates_and_links() -> impl Parser<
     let left_empty_opening_modifier = modifier
         .repeated()
         .at_least(1)
-        .then(just(ParagraphSegmentToken::Whitespace).not())
+        .then(opener_rhs())
         .map(|(modifiers, right)| {
             ParagraphSegment::AttachedModifierOpener((None, modifiers, right))
         });
@@ -344,7 +360,11 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                             closer: None,
                         }
                     }));
-                    acc.push(Token(right));
+                    // A peeked '`' was never consumed (see opener_rhs); it is
+                    // still in the stream, so re-emitting it would duplicate it.
+                    if right != ParagraphSegmentToken::Special(VERBATIM) {
+                        acc.push(Token(right));
+                    }
                 }
                 AttachedModifierCloserCandidate((left, modifiers, right)) => {
                     acc.push(*left);
@@ -363,7 +383,9 @@ fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
                             .into_iter()
                             .map(|c| Token(ParagraphSegmentToken::Special(c))),
                     );
-                    acc.push(Token(right));
+                    if right != ParagraphSegmentToken::Special(VERBATIM) {
+                        acc.push(Token(right));
+                    }
                 }
                 others => acc.push(others),
             };
