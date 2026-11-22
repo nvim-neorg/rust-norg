@@ -158,9 +158,7 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: usize) ->
                 seen = true;
                 break;
             }
-            NorgASTFlat::CarryoverTag { next_object, .. }
-                if matches!(**next_object, NorgASTFlat::Heading { .. }) =>
-            {
+            NorgASTFlat::CarryoverTag { next_object, .. } => {
                 if let NorgASTFlat::Heading { level, .. } = **next_object {
                     if level <= *start_level {
                         content = stage_4_from(&flat[(i + 1)..j]);
@@ -170,8 +168,6 @@ fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: usize) ->
                     } else {
                         heading_level = level as i16;
                     }
-                } else {
-                    unreachable!()
                 }
             }
             _ => {}
@@ -205,9 +201,7 @@ fn consume_nestable_detached_mod_content(
                     return (stage_4_from(&flat[(i + 1)..]), j + 1);
                 }
             }
-            NorgASTFlat::CarryoverTag { next_object, .. }
-                if matches!(**next_object, NorgASTFlat::NestableDetachedModifier { .. }) =>
-            {
+            NorgASTFlat::CarryoverTag { next_object, .. } => {
                 if let NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } = **next_object {
                     if modifier_type != list_type || level <= *start_level {
                         return (stage_4_from(&flat[(i + 1)..j]), j - 1);
@@ -215,7 +209,7 @@ fn consume_nestable_detached_mod_content(
                         return (stage_4_from(&flat[(i + 1)..]), j + 1);
                     }
                 } else {
-                    unreachable!()
+                    return (stage_4_from(&flat[(i + 1)..j]), j - 1);
                 }
             }
             _ => {
