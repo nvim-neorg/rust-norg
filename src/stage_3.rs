@@ -74,6 +74,13 @@ pub enum RangedTag {
     Standard,
 }
 
+fn params_to_strings(parameters: Vec<ParagraphTokenList>) -> Vec<String> {
+    parameters
+        .into_iter()
+        .map(|parameter| parameter.into_iter().map_into::<String>().collect())
+        .collect()
+}
+
 fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
     'a,
     &'a [ParagraphSegmentToken],
@@ -683,11 +690,11 @@ pub fn stage_3<'src>(
         let heading = select! {
             NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
         }
-        .try_map(move |(level, title, extension_section), _span| Ok(NorgASTFlat::Heading {
+        .map(|(level, title, extension_section)| NorgASTFlat::Heading {
             level,
             title: parse_paragraph(title),
             extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
-        }));
+        });
 
         let stringify_tokens_and_split = move |tokens: ParagraphTokenList| -> Vec<String> {
             tokens.into_iter().map_into::<String>().collect::<String>().split('.').map_into().collect()
@@ -702,7 +709,7 @@ pub fn stage_3<'src>(
                 NorgASTFlat::CarryoverTag {
                     tag_type,
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
+                    parameters: params_to_strings(parameters),
                     next_object: Box::new(next_object),
                 }
             });
@@ -711,7 +718,7 @@ pub fn stage_3<'src>(
             NorgBlock::VerbatimRangedTag { name, parameters, content } => {
                 NorgASTFlat::VerbatimRangedTag {
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
+                    parameters: params_to_strings(parameters),
                     content: dedent(content.into_iter().map_into::<String>().collect::<String>().as_str()),
                 }
             },
@@ -720,8 +727,8 @@ pub fn stage_3<'src>(
         let stage_3_ref3 = stage_3.clone();
 
         let ranged_tag = select! {
-            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect()),
-            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect())
+            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), params_to_strings(parameters)),
+            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), params_to_strings(parameters))
         }.then(stage_3_ref3.repeated().collect::<Vec<_>>()).then(select! {
             NorgBlock::RangedTagEnd('=') => RangedTag::Macro,
             NorgBlock::RangedTagEnd('|') => RangedTag::Standard,
@@ -732,7 +739,7 @@ pub fn stage_3<'src>(
         });
 
         let infirm_tag = select! {
-            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect() },
+            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: params_to_strings(parameters) },
         };
 
         let delimiting_mod = select! {

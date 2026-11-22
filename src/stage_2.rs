@@ -76,22 +76,22 @@ pub enum NorgBlock {
     RangedTag {
         tag_type: char,
         name: ParagraphTokenList,
-        parameters: Option<Vec<ParagraphTokenList>>,
+        parameters: Vec<ParagraphTokenList>,
     },
     RangedTagEnd(char),
     VerbatimRangedTag {
         name: ParagraphTokenList,
-        parameters: Option<Vec<ParagraphTokenList>>,
+        parameters: Vec<ParagraphTokenList>,
         content: Vec<NorgToken>,
     },
     InfirmTag {
         name: ParagraphTokenList,
-        parameters: Option<Vec<ParagraphTokenList>>,
+        parameters: Vec<ParagraphTokenList>,
     },
     CarryoverTag {
         tag_type: char,
         name: ParagraphTokenList,
-        parameters: Option<Vec<ParagraphTokenList>>,
+        parameters: Vec<ParagraphTokenList>,
     },
     DelimitingModifier(char),
 }
@@ -102,6 +102,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
 
     let whitespace = select! { Whitespace(_) => () };
     let ws = whitespace.repeated().at_least(1).ignored();
+    let optional_ws = ws.or_not();
 
     let newlines_or_eof = select! {
         s @ SingleNewline => s,
@@ -259,11 +260,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
 
         parse_char
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
-            .then(
-                ws
-                    .ignore_then(tag_parameters)
-                    .or_not(),
-            )
+            .then(optional_ws.ignore_then(tag_parameters))
             .then_ignore(just(SingleNewline).or_not())
             .then_ignore(any().filter(|tok: &NorgToken| matches!(tok, Newlines(_))).or_not())
             .then(verbatim_content)
@@ -271,12 +268,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .map(
                 |((name, parameters), content)| NorgBlock::VerbatimRangedTag {
                     name: tokens_to_paragraph_segment(name),
-                    parameters: parameters.map(|tokens| {
-                        tokens
-                            .into_iter()
-                            .map(tokens_to_paragraph_segment)
-                            .collect()
-                    }),
+                    parameters: parameters.into_iter().map(tokens_to_paragraph_segment).collect(),
                     content: content.unwrap_or_default(),
                 },
             )
@@ -287,11 +279,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
 
         parse_char
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
-            .then(
-                ws
-                    .ignore_then(parameters)
-                    .or_not(),
-            )
+            .then(optional_ws.ignore_then(parameters))
             .then_ignore(select! {
                 SingleNewline => (),
                 Newlines(_) => (),
@@ -299,35 +287,21 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .map(move |(name, parameters)| NorgBlock::RangedTag {
                 tag_type: c,
                 name: tokens_to_paragraph_segment(name),
-                parameters: parameters.map(|tokens| {
-                    tokens
-                        .into_iter()
-                        .map(tokens_to_paragraph_segment)
-                        .collect()
-                }),
+                parameters: parameters.into_iter().map(tokens_to_paragraph_segment).collect(),
             })
     };
 
     let infirm_tag = {
         select! { Special('.') => '.' }
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
-            .then(
-                ws
-                    .ignore_then(parameters)
-                    .or_not(),
-            )
+            .then(optional_ws.ignore_then(parameters))
             .then_ignore(select! {
                 SingleNewline => (),
                 Newlines(_) => (),
             })
             .map(|(name, parameters)| NorgBlock::InfirmTag {
                 name: tokens_to_paragraph_segment(name),
-                parameters: parameters.map(|tokens| {
-                    tokens
-                        .into_iter()
-                        .map(tokens_to_paragraph_segment)
-                        .collect()
-                }),
+                parameters: parameters.into_iter().map(tokens_to_paragraph_segment).collect(),
             })
     };
 
@@ -337,11 +311,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             Special('#') => '#',
         }
         .then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
-        .then(
-            ws
-                    .ignore_then(parameters)
-                .or_not(),
-        )
+        .then(optional_ws.ignore_then(parameters))
         .then_ignore(select! {
         Newlines(_) => (),
         SingleNewline => (),
@@ -349,12 +319,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         .map(|((tag_type, name), parameters)| NorgBlock::CarryoverTag {
             tag_type,
             name: tokens_to_paragraph_segment(name),
-            parameters: parameters.map(|tokens| {
-                tokens
-                    .into_iter()
-                    .map(tokens_to_paragraph_segment)
-                    .collect()
-            }),
+            parameters: parameters.into_iter().map(tokens_to_paragraph_segment).collect(),
         })
     };
 
