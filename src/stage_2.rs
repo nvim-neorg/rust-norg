@@ -101,6 +101,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
     use NorgToken::*;
 
     let whitespace = select! { Whitespace(_) => () };
+    let ws = whitespace.repeated().at_least(1).ignored();
 
     let newlines_or_eof = select! {
         s @ SingleNewline => s,
@@ -138,7 +139,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         .repeated()
         .at_least(1)
         .collect::<Vec<_>>()
-        .separated_by(whitespace.repeated().at_least(1).ignored())
+        .separated_by(ws)
         .collect::<Vec<_>>();
 
     let heading = select! {
@@ -148,7 +149,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
     .at_least(1)
     .collect::<Vec<_>>()
     .map(|chars| chars.len() as u16)
-    .then_ignore(whitespace.repeated().at_least(1).ignored())
+    .then_ignore(ws)
     .then(extension_section.clone().or_not())
     .then(paragraph_segment)
     .then_ignore(newlines_or_eof)
@@ -189,7 +190,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             ))
         }
     })
-    .then_ignore(whitespace.repeated().at_least(1).ignored())
+    .then_ignore(ws)
     .then(extension_section.clone().or_not())
     .map(
         |((modifier_type, level), extension_section)| NorgBlock::NestableDetachedModifier {
@@ -207,7 +208,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .at_most(2)
             .collect::<Vec<_>>()
             .map(|chars| (chars[0], chars.len() == 2))
-            .then_ignore(whitespace.repeated().at_least(1).ignored())
+            .then_ignore(ws)
             .then(extension_section.clone().or_not())
             .then(paragraph_segment)
             .then_ignore(newlines_or_eof)
@@ -247,7 +248,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
             .repeated()
             .at_least(1)
             .collect::<Vec<_>>()
-            .separated_by(whitespace.repeated().at_least(1).ignored())
+            .separated_by(ws)
             .collect::<Vec<_>>();
 
         let verbatim_content = any()
@@ -259,10 +260,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         parse_char
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
-                whitespace
-                    .repeated()
-                    .at_least(1)
-                    .ignored()
+                ws
                     .ignore_then(tag_parameters)
                     .or_not(),
             )
@@ -290,10 +288,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         parse_char
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
-                whitespace
-                    .repeated()
-                    .at_least(1)
-                    .ignored()
+                ws
                     .ignore_then(parameters)
                     .or_not(),
             )
@@ -317,10 +312,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         select! { Special('.') => '.' }
             .ignore_then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
             .then(
-                whitespace
-                    .repeated()
-                    .at_least(1)
-                    .ignored()
+                ws
                     .ignore_then(parameters)
                     .or_not(),
             )
@@ -346,10 +338,7 @@ pub fn stage_2<'src>() -> impl Parser<'src, &'src [NorgToken], Vec<NorgBlock>, e
         }
         .then(not_newlines_ws_or_eof.repeated().at_least(1).collect::<Vec<_>>())
         .then(
-            whitespace
-                    .repeated()
-                    .at_least(1)
-                    .ignored()
+            ws
                     .ignore_then(parameters)
                 .or_not(),
         )
