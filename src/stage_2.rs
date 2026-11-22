@@ -38,28 +38,15 @@ pub type ParagraphTokenList = Vec<ParagraphSegmentToken>;
 fn tokens_to_paragraph_segment(tokens: Vec<NorgToken>) -> ParagraphTokenList {
     tokens
         .into_iter()
-        .peekable()
-        .batching(|it| match it.next() {
-            Some(NorgToken::SingleNewline) | Some(NorgToken::Whitespace(_)) => {
-                Some(ParagraphSegmentToken::Whitespace)
+        .map(|token| match token {
+            NorgToken::Whitespace(_) | NorgToken::SingleNewline | NorgToken::Newlines(_) => {
+                ParagraphSegmentToken::Whitespace
             }
-            Some(NorgToken::Special(c)) => Some(ParagraphSegmentToken::Special(c)),
-            Some(NorgToken::Escape(c)) => Some(ParagraphSegmentToken::Escape(c)),
-            Some(NorgToken::Text(s)) => Some(ParagraphSegmentToken::Text(s)),
-            Some(NorgToken::Regular(c)) => {
-                let mut result: String = it
-                    .peeking_take_while(|token| matches!(token, NorgToken::Regular(_)))
-                    .map_into::<String>()
-                    .collect();
-
-                result.insert(0, c);
-
-                Some(ParagraphSegmentToken::Text(result))
-            },
-            Some(NorgToken::End(x)) => Some(ParagraphSegmentToken::Text(format!("{x}end"))),
-            Some(NorgToken::Newlines(_)) => Some(ParagraphSegmentToken::Whitespace),
-            Some(NorgToken::Eof) => Some(ParagraphSegmentToken::Text(String::new())),
-            None => None,
+            NorgToken::Special(c) => ParagraphSegmentToken::Special(c),
+            NorgToken::Escape(c) => ParagraphSegmentToken::Escape(c),
+            NorgToken::Text(s) => ParagraphSegmentToken::Text(s),
+            NorgToken::End(x) => ParagraphSegmentToken::Text(format!("{x}end")),
+            NorgToken::Eof => ParagraphSegmentToken::Text(String::new()),
         })
         .collect()
 }
