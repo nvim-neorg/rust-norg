@@ -242,27 +242,66 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
     })
 }
 
-fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
+fn push_unraveled(result: &mut Vec<ParagraphSegment>, segment: ParagraphSegment) {
+    use ParagraphSegment::*;
+
+    match segment {
+        t @ Token(_) => result.push(t),
+        AttachedModifierOpener((left, modifiers, right)) => {
+            if let Some(left) = left {
+                result.push(Token(left));
+            }
+            result.extend(modifiers.into_iter().map(|modifier_type| AttachedModifierCandidate {
+                modifier_type,
+                content: Vec::default(),
+                closer: None,
+            }));
+            result.push(Token(right));
+        }
+        AttachedModifierCloserCandidate((left, modifiers, right)) => {
+            result.push(*left);
+            result.extend(modifiers.into_iter().map(AttachedModifierCloser));
+            if let Some(right) = right {
+                result.push(*right);
+            }
+        }
+        AttachedModifierCloser(c) => result.push(Token(ParagraphSegmentToken::Special(c))),
+        AttachedModifierOpenerFail((left, modifiers, right)) => {
+            if let Some(left) = left {
+                result.push(Token(left));
+            }
+            result.extend(modifiers.into_iter().map(|c| Token(ParagraphSegmentToken::Special(c))));
+            result.push(Token(right));
+        }
+        others => result.push(others),
+    }
+}
+
+fn dedup_and_unravel(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
     let mut iter = input.into_iter();
-    let Some(mut prev) = iter.next() else {
-        return vec![];
-    };
-    let mut result = Vec::with_capacity(1);
+    let mut prev = iter.next();
+    let mut result = Vec::new();
     for next in iter {
-        match (&prev, &next) {
-            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => {
-                result.push(prev);
-                prev = AttachedModifierOpenerFail(data.clone());
+        match prev.take() {
+            Some(AttachedModifierOpener(data)) if matches!(&next, AttachedModifierOpener(_)) => {
+                push_unraveled(&mut result, AttachedModifierOpener(data));
+                prev = match next {
+                    AttachedModifierOpener(next_data) => Some(AttachedModifierOpenerFail(next_data)),
+                    _ => unreachable!(),
+                };
             }
-            _ => {
-                result.push(prev);
-                prev = next;
+            Some(segment) => {
+                push_unraveled(&mut result, segment);
+                prev = Some(next);
             }
+            None => unreachable!(),
         }
     }
-    result.push(prev);
+    if let Some(prev) = prev {
+        push_unraveled(&mut result, prev);
+    }
     result
 }
 
@@ -313,50 +352,11 @@ fn paragraph_parser_closer_candidates<'a>(
 }
 
 fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
-    use ParagraphSegment::*;
-
-    input
-        .into_iter()
-        .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
-            match segment {
-                t @ Token(_) => acc.push(t),
-                AttachedModifierOpener((left, modifiers, right)) => {
-                    if let Some(left) = left {
-                        acc.push(Token(left));
-                    }
-                    acc.extend(modifiers.into_iter().map(|modifier_type| {
-                        AttachedModifierCandidate {
-                            modifier_type,
-                            content: Vec::default(),
-                            closer: None,
-                        }
-                    }));
-                    acc.push(Token(right));
-                }
-                AttachedModifierCloserCandidate((left, modifiers, right)) => {
-                    acc.push(*left);
-                    acc.extend(modifiers.into_iter().map(AttachedModifierCloser));
-                    if let Some(right) = right {
-                        acc.push(*right);
-                    }
-                }
-                AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
-                AttachedModifierOpenerFail((left, modifiers, right)) => {
-                    if let Some(left) = left {
-                        acc.push(Token(left));
-                    }
-                    acc.extend(
-                        modifiers
-                            .into_iter()
-                            .map(|c| Token(ParagraphSegmentToken::Special(c))),
-                    );
-                    acc.push(Token(right));
-                }
-                others => acc.push(others),
-            };
-
-            acc
-        })
+    let mut result = Vec::new();
+    for segment in input {
+        push_unraveled(&mut result, segment);
+    }
+    result
 }
 
 fn paragraph_rollup_candidates<'a>(
@@ -465,8 +465,7 @@ fn parse_paragraph(
         .parse(&input[..])
         .into_result()
         .unwrap();
-    let deduped = dedup_opener_candidates(stage1_result);
-    let unraveled1 = unravel_candidates(deduped);
+    let unraveled1 = dedup_and_unravel(stage1_result);
 
     let stage2_result = paragraph_parser_closer_candidates()
         .parse(&unraveled1)
