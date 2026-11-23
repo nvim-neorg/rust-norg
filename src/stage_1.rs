@@ -13,7 +13,6 @@ pub enum NorgToken {
     Whitespace(u16),
     SingleNewline,
     Newlines(u16),
-    Regular(char),
     Text(String),
     Special(char),
     Escape(char),
@@ -27,11 +26,21 @@ impl std::fmt::Display for NorgToken {
             Self::End(c) => write!(f, "{}end", c),
             Self::Eof => f.write_char('\0'),
             Self::Escape(c) => write!(f, "\\{}", c),
-            Self::Newlines(count) => f.write_str(&"\n".repeat(*count as usize)),
-            Self::Regular(c) | Self::Special(c) => f.write_char(*c),
+            Self::Newlines(count) => {
+                for _ in 0..*count {
+                    f.write_char('\n')?;
+                }
+                Ok(())
+            }
+            Self::Special(c) => f.write_char(*c),
             Self::SingleNewline => f.write_char('\n'),
             Self::Text(s) => f.write_str(s),
-            Self::Whitespace(count) => f.write_str(&" ".repeat(*count as usize)),
+            Self::Whitespace(count) => {
+                for _ in 0..*count {
+                    f.write_char(' ')?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -45,28 +54,10 @@ impl From<NorgToken> for String {
 /// A list of characters which are considered "special", i.e. for parsing of attached modifiers.
 const SPECIAL_CHARS: &str = "*-~/_!%^,\"'`$:@|=.#+<>()[]{}\\";
 
-/// List of chars that proceed "end" tags are handled inline in the is_tag_char check.
-
-fn coalesce_regular_chars(mut tokens: Vec<NorgToken>) -> Vec<NorgToken> {
-    let mut result = Vec::with_capacity(tokens.len());
-    let mut text_buf = String::new();
-    for token in tokens.drain(..) {
-        match token {
-            NorgToken::Regular(c) => {
-                text_buf.push(c);
-            }
-            other => {
-                if !text_buf.is_empty() {
-                    result.push(NorgToken::Text(std::mem::take(&mut text_buf)));
-                }
-                result.push(other);
-            }
-        }
-    }
+fn flush_text(tokens: &mut Vec<NorgToken>, text_buf: &mut String) {
     if !text_buf.is_empty() {
-        result.push(NorgToken::Text(text_buf));
+        tokens.push(NorgToken::Text(std::mem::take(text_buf)));
     }
-    result
 }
 
 /// Parses a `.norg` document and breaks it up into tokens.
@@ -78,9 +69,11 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
         let is_tag_char = |c: char| matches!(c, '|' | '@' | '=');
 
         let mut tokens = Vec::new();
+        let mut text_buf = String::new();
 
         loop {
             let Some(c) = inp.next() else {
+                flush_text(&mut tokens, &mut text_buf);
                 tokens.push(NorgToken::Eof);
                 return Ok(tokens);
             };
@@ -100,6 +93,7 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
                 }
 
                 if is_tag_end {
+                    flush_text(&mut tokens, &mut text_buf);
                     tokens.push(NorgToken::End(c));
                     continue;
                 }
@@ -107,6 +101,7 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
             }
 
             if c == '\\' {
+                flush_text(&mut tokens, &mut text_buf);
                 if let Some(escaped) = inp.next() {
                     tokens.push(NorgToken::Escape(escaped));
                 } else {
@@ -121,6 +116,7 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
                     inp.next();
                     count += 1;
                 }
+                flush_text(&mut tokens, &mut text_buf);
                 if count == 1 {
                     tokens.push(NorgToken::SingleNewline);
                 } else {
@@ -135,18 +131,18 @@ pub fn stage_1<'src>() -> impl Parser<'src, &'src str, Vec<NorgToken>, extra::Er
                     inp.next();
                     count += 1;
                 }
+                flush_text(&mut tokens, &mut text_buf);
                 tokens.push(NorgToken::Whitespace(count));
                 continue;
             }
 
             if SPECIAL_CHARS.contains(c) {
+                flush_text(&mut tokens, &mut text_buf);
                 tokens.push(NorgToken::Special(c));
                 continue;
             }
 
-            // Regular character, will be coalesced into Text runs at the end
-            tokens.push(NorgToken::Regular(c));
+            text_buf.push(c);
         }
     })
-    .map(coalesce_regular_chars)
 }

@@ -74,6 +74,13 @@ pub enum RangedTag {
     Standard,
 }
 
+fn params_to_strings(parameters: Vec<ParagraphTokenList>) -> Vec<String> {
+    parameters
+        .into_iter()
+        .map(|parameter| parameter.into_iter().map_into::<String>().collect())
+        .collect()
+}
+
 fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
     'a,
     &'a [ParagraphSegmentToken],
@@ -225,37 +232,69 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
         .repeated()
         .at_least(1)
         .collect::<Vec<_>>(),
-    ).map(|(prefix, mut body)| {
-        let mut result = match prefix {
-            Some(p) => vec![p],
-            None => vec![],
-        };
-        result.append(&mut body);
-        result
-    })
+    ).map(|(prefix, body)| prefix.into_iter().chain(body).collect())
 }
 
-fn dedup_opener_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
+fn push_unraveled(result: &mut Vec<ParagraphSegment>, segment: ParagraphSegment) {
+    use ParagraphSegment::*;
+
+    match segment {
+        t @ Token(_) => result.push(t),
+        AttachedModifierOpener((left, modifiers, right)) => {
+            if let Some(left) = left {
+                result.push(Token(left));
+            }
+            result.extend(modifiers.into_iter().map(|modifier_type| AttachedModifierCandidate {
+                modifier_type,
+                content: Vec::default(),
+                closer: None,
+            }));
+            result.push(Token(right));
+        }
+        AttachedModifierCloserCandidate((left, modifiers, right)) => {
+            result.push(*left);
+            result.extend(modifiers.into_iter().map(AttachedModifierCloser));
+            if let Some(right) = right {
+                result.push(*right);
+            }
+        }
+        AttachedModifierCloser(c) => result.push(Token(ParagraphSegmentToken::Special(c))),
+        AttachedModifierOpenerFail((left, modifiers, right)) => {
+            if let Some(left) = left {
+                result.push(Token(left));
+            }
+            result.extend(modifiers.into_iter().map(|c| Token(ParagraphSegmentToken::Special(c))));
+            result.push(Token(right));
+        }
+        others => result.push(others),
+    }
+}
+
+fn dedup_and_unravel(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
     use ParagraphSegment::*;
 
     let mut iter = input.into_iter();
-    let Some(mut prev) = iter.next() else {
-        return vec![];
-    };
-    let mut result = Vec::with_capacity(1);
+    let mut prev = iter.next();
+    let mut result = Vec::new();
     for next in iter {
-        match (&prev, &next) {
-            (AttachedModifierOpener(_), AttachedModifierOpener(data)) => {
-                result.push(prev);
-                prev = AttachedModifierOpenerFail(data.clone());
+        match prev.take() {
+            Some(AttachedModifierOpener(data)) if matches!(&next, AttachedModifierOpener(_)) => {
+                push_unraveled(&mut result, AttachedModifierOpener(data));
+                prev = match next {
+                    AttachedModifierOpener(next_data) => Some(AttachedModifierOpenerFail(next_data)),
+                    _ => unreachable!(),
+                };
             }
-            _ => {
-                result.push(prev);
-                prev = next;
+            Some(segment) => {
+                push_unraveled(&mut result, segment);
+                prev = Some(next);
             }
+            None => unreachable!(),
         }
     }
-    result.push(prev);
+    if let Some(prev) = prev {
+        push_unraveled(&mut result, prev);
+    }
     result
 }
 
@@ -306,50 +345,10 @@ fn paragraph_parser_closer_candidates<'a>(
 }
 
 fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
-    use ParagraphSegment::*;
-
-    input
-        .into_iter()
-        .fold(Vec::new(), |mut acc: Vec<ParagraphSegment>, segment| {
-            match segment {
-                t @ Token(_) => acc.push(t),
-                AttachedModifierOpener((left, modifiers, right)) => {
-                    if let Some(left) = left {
-                        acc.push(Token(left));
-                    }
-                    acc.extend(modifiers.into_iter().map(|modifier_type| {
-                        AttachedModifierCandidate {
-                            modifier_type,
-                            content: Vec::default(),
-                            closer: None,
-                        }
-                    }));
-                    acc.push(Token(right));
-                }
-                AttachedModifierCloserCandidate((left, modifiers, right)) => {
-                    acc.push(*left);
-                    acc.extend(modifiers.into_iter().map(AttachedModifierCloser));
-                    if let Some(right) = right {
-                        acc.push(*right);
-                    }
-                }
-                AttachedModifierCloser(c) => acc.push(Token(ParagraphSegmentToken::Special(c))),
-                AttachedModifierOpenerFail((left, modifiers, right)) => {
-                    if let Some(left) = left {
-                        acc.push(Token(left));
-                    }
-                    acc.extend(
-                        modifiers
-                            .into_iter()
-                            .map(|c| Token(ParagraphSegmentToken::Special(c))),
-                    );
-                    acc.push(Token(right));
-                }
-                others => acc.push(others),
-            };
-
-            acc
-        })
+    input.into_iter().fold(Vec::new(), |mut result, segment| {
+        push_unraveled(&mut result, segment);
+        result
+    })
 }
 
 fn paragraph_rollup_candidates<'a>(
@@ -458,8 +457,7 @@ fn parse_paragraph(
         .parse(&input[..])
         .into_result()
         .unwrap();
-    let deduped = dedup_opener_candidates(stage1_result);
-    let unraveled1 = unravel_candidates(deduped);
+    let unraveled1 = dedup_and_unravel(stage1_result);
 
     let stage2_result = paragraph_parser_closer_candidates()
         .parse(&unraveled1)
@@ -620,11 +618,11 @@ pub fn stage_3<'src>(
                 .collect::<Vec<_>>()
                 .then(paragraph_segment_end.or_not())
                 .map(|(segments, end)| {
-                    let mut tokens: Vec<ParagraphSegmentToken> = segments.into_iter().flatten().collect();
-                    if let Some(end) = end {
-                        tokens.extend(end);
-                    }
-                    tokens
+                    segments
+                        .into_iter()
+                        .flatten()
+                        .chain(end.unwrap_or_default())
+                        .collect::<Vec<_>>()
                 }),
             paragraph_segment_end
                 .map(|end| end),
@@ -683,11 +681,11 @@ pub fn stage_3<'src>(
         let heading = select! {
             NorgBlock::Heading { level, title, extension_section } => (level, title, extension_section),
         }
-        .try_map(move |(level, title, extension_section), _span| Ok(NorgASTFlat::Heading {
+        .map(|(level, title, extension_section)| NorgASTFlat::Heading {
             level,
             title: parse_paragraph(title),
             extensions: detached_modifier_extensions().parse(&extension_section[..]).into_result().unwrap_or_default(),
-        }));
+        });
 
         let stringify_tokens_and_split = move |tokens: ParagraphTokenList| -> Vec<String> {
             tokens.into_iter().map_into::<String>().collect::<String>().split('.').map_into().collect()
@@ -702,7 +700,7 @@ pub fn stage_3<'src>(
                 NorgASTFlat::CarryoverTag {
                     tag_type,
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
+                    parameters: params_to_strings(parameters),
                     next_object: Box::new(next_object),
                 }
             });
@@ -711,7 +709,7 @@ pub fn stage_3<'src>(
             NorgBlock::VerbatimRangedTag { name, parameters, content } => {
                 NorgASTFlat::VerbatimRangedTag {
                     name: stringify_tokens_and_split(name),
-                    parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect(),
+                    parameters: params_to_strings(parameters),
                     content: dedent(content.into_iter().map_into::<String>().collect::<String>().as_str()),
                 }
             },
@@ -720,8 +718,8 @@ pub fn stage_3<'src>(
         let stage_3_ref3 = stage_3.clone();
 
         let ranged_tag = select! {
-            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect()),
-            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect())
+            NorgBlock::RangedTag { tag_type: '=', name, parameters } => (RangedTag::Macro, stringify_tokens_and_split(name), params_to_strings(parameters)),
+            NorgBlock::RangedTag { tag_type: '|', name, parameters } => (RangedTag::Standard, stringify_tokens_and_split(name), params_to_strings(parameters))
         }.then(stage_3_ref3.repeated().collect::<Vec<_>>()).then(select! {
             NorgBlock::RangedTagEnd('=') => RangedTag::Macro,
             NorgBlock::RangedTagEnd('|') => RangedTag::Standard,
@@ -732,7 +730,7 @@ pub fn stage_3<'src>(
         });
 
         let infirm_tag = select! {
-            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: parameters.unwrap_or_default().into_iter().map(|parameter| parameter.into_iter().map_into::<String>().collect()).collect() },
+            NorgBlock::InfirmTag { name, parameters, } => NorgASTFlat::InfirmTag { name: stringify_tokens_and_split(name), parameters: params_to_strings(parameters) },
         };
 
         let delimiting_mod = select! {

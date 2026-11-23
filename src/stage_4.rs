@@ -128,59 +128,41 @@ fn convert(flat: NorgASTFlat) -> NorgAST {
 
 fn consume_heading_content(start_level: &u16, flat: &[NorgASTFlat], i: usize) -> (Vec<NorgAST>, usize) {
     let mut heading_level = *start_level as i16;
-    let mut content = vec![];
-    let mut seen = false;
-    let mut result_i = flat.len();
-    for j in (i + 1)..flat.len() {
-        match &flat[j] {
-            NorgASTFlat::Heading { level, .. } => {
-                if level <= start_level {
-                    content = stage_4_from(&flat[(i + 1)..j]);
-                    result_i = j - 1;
-                    seen = true;
-                    break;
-                } else {
-                    heading_level = *level as i16;
-                }
-            }
-            NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak) => {
-                heading_level -= 1;
-                if heading_level < *start_level as i16 {
-                    content = stage_4_from(&flat[(i + 1)..j]);
-                    result_i = j;
-                    seen = true;
-                    break;
-                }
-            }
-            NorgASTFlat::DelimitingModifier(DelimitingModifier::Strong) => {
-                content = stage_4_from(&flat[(i + 1)..j]);
-                result_i = j;
-                seen = true;
-                break;
-            }
-            NorgASTFlat::CarryoverTag { next_object, .. }
-                if matches!(**next_object, NorgASTFlat::Heading { .. }) =>
-            {
-                if let NorgASTFlat::Heading { level, .. } = **next_object {
-                    if level <= *start_level {
-                        content = stage_4_from(&flat[(i + 1)..j]);
-                        result_i = j - 1;
-                        seen = true;
-                        break;
+    let stop = flat[i + 1..]
+        .iter()
+        .enumerate()
+        .find_map(|(offset, item)| {
+            let j = i + 1 + offset;
+            match item {
+                NorgASTFlat::Heading { level, .. } => {
+                    if level <= start_level {
+                        Some((j, j - 1))
                     } else {
-                        heading_level = level as i16;
+                        heading_level = *level as i16;
+                        None
                     }
-                } else {
-                    unreachable!()
                 }
+                NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak) => {
+                    heading_level -= 1;
+                    (heading_level < *start_level as i16).then_some((j, j))
+                }
+                NorgASTFlat::DelimitingModifier(DelimitingModifier::Strong) => Some((j, j)),
+                NorgASTFlat::CarryoverTag { next_object, .. } => match &**next_object {
+                    NorgASTFlat::Heading { level, .. } if level <= start_level => Some((j, j - 1)),
+                    NorgASTFlat::Heading { level, .. } => {
+                        heading_level = *level as i16;
+                        None
+                    }
+                    _ => None,
+                },
+                _ => None,
             }
-            _ => {}
-        }
+        });
+
+    match stop {
+        Some((j, result_i)) => (stage_4_from(&flat[(i + 1)..j]), result_i),
+        None => (stage_4_from(&flat[i + 1..]), flat.len()),
     }
-    if !seen {
-        content = stage_4_from(&flat[i + 1..]);
-    }
-    (content, result_i)
 }
 
 /// Loop over the given flat tree from the given index `i` until a non-NestableDetachedModifier is
@@ -196,34 +178,45 @@ fn consume_nestable_detached_mod_content(
     i: usize,
     list_type: NestableDetachedModifier,
 ) -> (Vec<NorgAST>, usize) {
-    for j in (i + 1)..flat.len() {
-        match &flat[j] {
-            NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } => {
-                if *modifier_type != list_type || level <= start_level {
-                    return (stage_4_from(&flat[(i + 1)..j]), j - 1);
-                } else if j == flat.len() - 1 {
-                    return (stage_4_from(&flat[(i + 1)..]), j + 1);
-                }
-            }
-            NorgASTFlat::CarryoverTag { next_object, .. }
-                if matches!(**next_object, NorgASTFlat::NestableDetachedModifier { .. }) =>
-            {
-                if let NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } = **next_object {
-                    if modifier_type != list_type || level <= *start_level {
-                        return (stage_4_from(&flat[(i + 1)..j]), j - 1);
-                    } else if j == flat.len() - 1 {
-                        return (stage_4_from(&flat[(i + 1)..]), j + 1);
+    let stop = flat[i + 1..]
+        .iter()
+        .enumerate()
+        .find_map(|(offset, item)| {
+            let j = i + 1 + offset;
+            let last = j == flat.len() - 1;
+            match item {
+                NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. } => {
+                    if *modifier_type != list_type || level <= start_level {
+                        Some((j, j - 1, false))
+                    } else if last {
+                        Some((j, j + 1, true))
+                    } else {
+                        None
                     }
-                } else {
-                    unreachable!()
                 }
+                NorgASTFlat::CarryoverTag { next_object, .. } => match &**next_object {
+                    NorgASTFlat::NestableDetachedModifier { level, modifier_type, .. }
+                        if *modifier_type != list_type || level <= start_level =>
+                    {
+                        Some((j, j - 1, false))
+                    }
+                    NorgASTFlat::NestableDetachedModifier { .. } if last => {
+                        Some((j, j + 1, true))
+                    }
+                    NorgASTFlat::NestableDetachedModifier { .. } => None,
+                    _ => Some((j, j - 1, false)),
+                },
+                _ => Some((j, j - 1, false)),
             }
-            _ => {
-                return (stage_4_from(&flat[(i + 1)..j]), j - 1);
-            }
+        });
+
+    match stop {
+        Some((j, result_i, to_end)) => {
+            let end = if to_end { flat.len() } else { j };
+            (stage_4_from(&flat[(i + 1)..end]), result_i)
         }
+        None => (vec![], flat.len()),
     }
-    (vec![], flat.len())
 }
 
 fn stage_4_from(flat: &[NorgASTFlat]) -> Vec<NorgAST> {
@@ -319,14 +312,11 @@ fn stage_4_from(flat: &[NorgASTFlat]) -> Vec<NorgAST> {
                     content,
                 };
                 i = new_i;
-                if !ast.is_empty() {
-                    let len = ast.len();
-                    if let NorgAST::List { modifier_type: list_modifier, ref mut items } = ast[len - 1] {
-                        if *modifier_type == list_modifier {
-                            items.push(parsed);
-                            i += 1;
-                            continue
-                        }
+                if let Some(NorgAST::List { modifier_type: list_modifier, items }) = ast.last_mut() {
+                    if *modifier_type == *list_modifier {
+                        items.push(parsed);
+                        i += 1;
+                        continue
                     }
                 }
                 ast.push(NorgAST::List { modifier_type: *modifier_type, items: vec![parsed] });
