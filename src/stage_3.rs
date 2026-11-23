@@ -232,14 +232,7 @@ fn paragraph_parser_opener_candidates_and_links<'a>() -> impl Parser<
         .repeated()
         .at_least(1)
         .collect::<Vec<_>>(),
-    ).map(|(prefix, mut body)| {
-        let mut result = match prefix {
-            Some(p) => vec![p],
-            None => vec![],
-        };
-        result.append(&mut body);
-        result
-    })
+    ).map(|(prefix, body)| prefix.into_iter().chain(body).collect())
 }
 
 fn push_unraveled(result: &mut Vec<ParagraphSegment>, segment: ParagraphSegment) {
@@ -352,11 +345,10 @@ fn paragraph_parser_closer_candidates<'a>(
 }
 
 fn unravel_candidates(input: Vec<ParagraphSegment>) -> Vec<ParagraphSegment> {
-    let mut result = Vec::new();
-    for segment in input {
+    input.into_iter().fold(Vec::new(), |mut result, segment| {
         push_unraveled(&mut result, segment);
-    }
-    result
+        result
+    })
 }
 
 fn paragraph_rollup_candidates<'a>(
@@ -626,11 +618,11 @@ pub fn stage_3<'src>(
                 .collect::<Vec<_>>()
                 .then(paragraph_segment_end.or_not())
                 .map(|(segments, end)| {
-                    let mut tokens: Vec<ParagraphSegmentToken> = segments.into_iter().flatten().collect();
-                    if let Some(end) = end {
-                        tokens.extend(end);
-                    }
-                    tokens
+                    segments
+                        .into_iter()
+                        .flatten()
+                        .chain(end.unwrap_or_default())
+                        .collect::<Vec<_>>()
                 }),
             paragraph_segment_end
                 .map(|end| end),
